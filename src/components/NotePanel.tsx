@@ -45,7 +45,7 @@ export default function NotePanel({
         onBlur={(e) => {
           if (!cancelledRef.current) onSave(e.currentTarget.value);
         }}
-        className="w-full resize-y rounded-sm border border-amber-300 bg-amber-100 p-3 text-sm text-gray-800 shadow-sm outline-none placeholder:text-amber-700/50 focus:border-amber-400"
+        className="w-full resize-y rounded-md border border-note-line bg-note p-3 text-sm text-ink outline-none placeholder:text-ink-3 focus:border-ink/40"
       />
     );
   }
@@ -58,7 +58,7 @@ export default function NotePanel({
       onKeyDown={(e) => {
         if (e.key === "Enter") onStartEdit();
       }}
-      className="-rotate-[0.4deg] cursor-text whitespace-pre-wrap rounded-sm border border-amber-200 bg-amber-100 p-3 text-sm text-gray-800 shadow-sm"
+      className="cursor-text whitespace-pre-wrap rounded-md border border-note-line bg-note p-3 text-sm text-ink"
     >
       {note}
     </div>

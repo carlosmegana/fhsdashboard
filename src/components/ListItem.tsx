@@ -29,7 +29,7 @@ export default function ListItem({
   const noteState = useItemNote(item.note, onSaveNote);
 
   return (
-    <li className="group">
+    <li className="group py-1.5">
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
           <EditableText
@@ -38,7 +38,7 @@ export default function ListItem({
             onStartEdit={onStartEdit}
             onSave={onSave}
             onCancel={onCancel}
-            className="text-base text-stone-800"
+            className="text-[15px] text-ink"
           />
         </div>
         <NoteButton

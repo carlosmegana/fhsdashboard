@@ -43,7 +43,7 @@ export default function EditableText({
         onBlur={(e) => {
           if (!cancelledRef.current) onSave(e.currentTarget.value);
         }}
-        className="w-full rounded-lg border border-orange-200 px-2 py-0.5 text-base text-stone-800 outline-none focus:border-orange-400"
+        className="w-full rounded-md border border-line-2 px-2 py-0.5 text-[15px] text-ink outline-none focus:border-ink"
       />
     );
   }

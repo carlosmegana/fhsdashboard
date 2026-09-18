@@ -55,15 +55,15 @@ export default function HabitItem({
   const done = measurable ? item.progress > 0 : item.completed;
 
   return (
-    <li className="group">
+    <li className="group py-1.5">
       <div className="flex items-center gap-2">
         {measurable ? (
           // Measurable habits track progress via the stepper below; a small
           // check marks the window's goal as reached.
           <span
             aria-hidden="true"
-            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-white ${
-              reached ? "bg-emerald-500" : "border border-stone-300"
+            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-paper ${
+              reached ? "bg-good" : "border border-line-2"
             }`}
           >
             {reached && (
@@ -87,7 +87,7 @@ export default function HabitItem({
             id={item.id}
             checked={item.completed}
             onChange={(e) => onToggle(e.target.checked)}
-            className="h-4 w-4 shrink-0 cursor-pointer accent-orange-500"
+            className="h-4 w-4 shrink-0 cursor-pointer accent-ink"
           />
         )}
         <label htmlFor={item.id} className="sr-only">
@@ -100,11 +100,11 @@ export default function HabitItem({
             onStartEdit={onStartEdit}
             onSave={onSave}
             onCancel={onCancel}
-            className="text-base text-stone-800"
+            className="text-[15px] text-ink"
           />
         </div>
         {item.period !== "daily" && (
-          <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-600">
+          <span className="shrink-0 rounded-full border border-line px-2 py-0.5 text-[11px] font-medium text-ink-3">
             {PERIOD_LABEL[item.period]}
           </span>
         )}
@@ -131,7 +131,7 @@ export default function HabitItem({
             >
               −
             </StepperButton>
-            <span className="min-w-0 text-sm font-semibold tabular-nums text-stone-700">
+            <span className="min-w-0 text-sm tabular-nums text-ink-2">
               {item.progress} / {item.target}
               {item.unit ? ` ${item.unit}` : ""}
             </span>
@@ -143,7 +143,7 @@ export default function HabitItem({
             </StepperButton>
           </div>
           <div
-            className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-stone-100"
+            className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-paper-2"
             role="progressbar"
             aria-valuenow={item.progress}
             aria-valuemin={0}
@@ -152,7 +152,7 @@ export default function HabitItem({
           >
             <div
               className={`h-full rounded-full transition-[width] ${
-                reached ? "bg-emerald-500" : "bg-orange-400"
+                reached ? "bg-good" : "bg-ink"
               }`}
               style={{
                 width: `${Math.min(100, (item.progress / (item.target as number)) * 100)}%`,
@@ -207,7 +207,7 @@ function StepperButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-orange-200 text-lg leading-none text-orange-600 transition-colors hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-40"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line-2 text-lg leading-none text-ink-2 transition-colors hover:bg-paper-2 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>
@@ -231,8 +231,8 @@ function ConfigButton({
       onClick={onToggle}
       className={`shrink-0 p-1 transition-opacity ${
         active
-          ? "text-orange-500 hover:text-orange-600"
-          : "text-stone-400 hover:text-orange-500 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+          ? "text-ink hover:text-ink-2"
+          : "text-ink-3 hover:text-ink md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
       }`}
     >
       <svg
@@ -285,9 +285,9 @@ function HabitConfigPanel({
   };
 
   return (
-    <div className="rounded-xl border border-orange-100 bg-orange-50/60 p-3">
+    <div className="rounded-xl border border-line bg-paper-2 p-3">
       <div className="flex flex-wrap gap-2">
-        <label className="flex flex-col text-xs font-semibold text-stone-500">
+        <label className="flex flex-col text-xs font-semibold text-ink-2">
           Meta
           <input
             type="number"
@@ -295,20 +295,20 @@ function HabitConfigPanel({
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             placeholder="15"
-            className="mt-0.5 w-20 rounded-md border border-orange-200 bg-white px-2 py-1 text-sm text-stone-800 outline-none focus:border-orange-400"
+            className="mt-0.5 w-20 rounded-md border border-line-2 bg-paper px-2 py-1 text-sm text-ink outline-none focus:border-ink"
           />
         </label>
-        <label className="flex flex-col text-xs font-semibold text-stone-500">
+        <label className="flex flex-col text-xs font-semibold text-ink-2">
           Unidad
           <input
             type="text"
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
             placeholder="min"
-            className="mt-0.5 w-24 rounded-md border border-orange-200 bg-white px-2 py-1 text-sm text-stone-800 outline-none focus:border-orange-400"
+            className="mt-0.5 w-24 rounded-md border border-line-2 bg-paper px-2 py-1 text-sm text-ink outline-none focus:border-ink"
           />
         </label>
-        <label className="flex flex-col text-xs font-semibold text-stone-500">
+        <label className="flex flex-col text-xs font-semibold text-ink-2">
           Paso
           <input
             type="number"
@@ -316,14 +316,14 @@ function HabitConfigPanel({
             value={step}
             onChange={(e) => setStep(e.target.value)}
             placeholder="1"
-            className="mt-0.5 w-16 rounded-md border border-orange-200 bg-white px-2 py-1 text-sm text-stone-800 outline-none focus:border-orange-400"
+            className="mt-0.5 w-16 rounded-md border border-line-2 bg-paper px-2 py-1 text-sm text-ink outline-none focus:border-ink"
           />
         </label>
       </div>
 
-      <div className="mt-2 flex flex-col text-xs font-semibold text-stone-500">
+      <div className="mt-2 flex flex-col text-xs font-semibold text-ink-2">
         Se reinicia
-        <div className="mt-0.5 inline-flex rounded-md border border-orange-200 bg-white p-0.5">
+        <div className="mt-0.5 inline-flex rounded-md border border-line-2 bg-paper p-0.5">
           {(Object.keys(PERIOD_LABEL) as HabitPeriod[]).map((p) => (
             <button
               key={p}
@@ -331,8 +331,8 @@ function HabitConfigPanel({
               onClick={() => setPeriod(p)}
               className={`rounded px-2.5 py-1 text-sm transition-colors ${
                 period === p
-                  ? "bg-orange-500 text-white"
-                  : "text-stone-500 hover:bg-orange-50"
+                  ? "bg-ink text-paper"
+                  : "text-ink-2 hover:bg-paper-2"
               }`}
             >
               {PERIOD_LABEL[p]}
@@ -341,7 +341,7 @@ function HabitConfigPanel({
         </div>
       </div>
 
-      <p className="mt-2 text-xs text-stone-400">
+      <p className="mt-2 text-xs text-ink-3">
         Deja la meta vacia para volver a una casilla simple.
       </p>
 
@@ -349,14 +349,14 @@ function HabitConfigPanel({
         <button
           type="button"
           onClick={save}
-          className="rounded-full bg-orange-500 px-3 py-1 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+          className="rounded-md bg-ink px-3 py-1 text-sm font-medium text-paper transition-colors hover:bg-ink/85"
         >
           Guardar
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-full px-3 py-1 text-sm font-semibold text-stone-500 transition-colors hover:bg-white"
+          className="rounded-md px-3 py-1 text-sm font-medium text-ink-2 transition-colors hover:bg-paper-2"
         >
           Cancelar
         </button>

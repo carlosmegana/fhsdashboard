@@ -1,30 +1,40 @@
-# Personal Growth Canvas
+# Flow Habit System dashboard
 
-This web application serves as a digital Personal Growth Canvas. This dashboard provides a unified, box-separated grid to visually track behavioral parameters, keystone habits, core values, aspirational goals, and actionable tasks. It is fully built with React and Tailwind CSS for seamless Vercel deployments.
+A personal-growth dashboard for the Flow Habit System community and coaching
+clients. Four pages, one per time horizon: **Daily**, **Weekly**, **Monthly**,
+and **Quarterly & Yearly**. Each signed-in person has their own private data.
 
-All data lives in `localStorage` — single user, no auth, no database. UI copy is in Spanish.
+Accounts are invite-only. The owner creates invite links from the in-app
+**Admin** page; a link can be single-use or shared with a whole cohort.
+
+Built on Next.js 16, React 19, Tailwind CSS v4 and Supabase (auth + Postgres),
+deployed on Vercel.
+
+## Getting it running
+
+See [SETUP.md](SETUP.md). It walks through creating the Supabase project,
+running the migrations, connecting Vercel, and creating the first (owner)
+account.
 
 ## Development
 
 ```bash
+cp .env.example .env.local   # fill in the three Supabase values
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+`npm run lint` and `npm run build` must pass before pushing.
 
-## Production
+## Where things live
 
-```bash
-npm run build
-npm run start
-```
-
-## Features
-
-- 5-card canvas grid (3 columns on desktop, single column stacked on mobile).
-- Daily habit reset: habit checkboxes clear automatically on a new day; tasks persist until deleted.
-- Inline add/edit/delete on every card (click text to edit, `Enter` saves, `Escape` cancels).
-- Persists in `localStorage` (`pgc_data`, schema version in `pgc_schema_version`); starts with empty cards on first visit and degrades gracefully to in-memory state when storage is unavailable.
-
-Full spec: [.claude/Personal_Growth_Canvas_PRD.md](.claude/Personal_Growth_Canvas_PRD.md)
+- `src/app/(app)/` — the four horizon pages and the admin page, wrapped in a
+  shared layout with the top navigation.
+- `src/app/login/` — sign in / invite-gated sign up.
+- `src/components/` — dashboard cards and item rows; `admin/` holds the invite
+  form and copy-link button.
+- `src/lib/db.ts` — every read/write against Supabase for the Daily page.
+- `src/lib/invites.ts` — invite code generation and status rules.
+- `src/app/globals.css` — the design tokens. Change the palette here.
+- `supabase/migrations/` — the database schema, applied in order.
+- `.claude/handoff.md` — detailed notes on conventions and gotchas.

@@ -15,7 +15,7 @@ export default function DashboardCard({
 }: DashboardCardProps) {
   return (
     <section
-      className={`rounded-2xl border border-orange-100/70 bg-white shadow-sm ${
+      className={`rounded-lg border border-line bg-paper ${
         fillHeight ? "md:relative" : ""
       } ${className}`}
     >
@@ -25,14 +25,14 @@ export default function DashboardCard({
         }`}
       >
         <h2
-          className={`text-sm font-bold uppercase tracking-wide text-stone-500 ${
+          className={`text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3 ${
             description ? "mb-0.5" : "mb-3"
           }`}
         >
           {title}
         </h2>
         {description && (
-          <p className="mb-3 text-xs text-stone-400">{description}</p>
+          <p className="mb-3 text-xs text-ink-3">{description}</p>
         )}
         {children}
       </div>

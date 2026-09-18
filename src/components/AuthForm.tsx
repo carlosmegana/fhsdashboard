@@ -5,8 +5,10 @@ import { signIn, signUp, type AuthState } from "@/app/login/actions";
 
 type Mode = "signin" | "signup";
 
-export default function AuthForm() {
-  const [mode, setMode] = useState<Mode>("signin");
+// `initialInvite` comes from an invite link (/login?invite=CODE): the form then
+// opens in signup mode with the code pre-filled.
+export default function AuthForm({ initialInvite = "" }: { initialInvite?: string }) {
+  const [mode, setMode] = useState<Mode>(initialInvite ? "signup" : "signin");
   const action = mode === "signin" ? signIn : signUp;
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     action,
@@ -18,14 +20,14 @@ export default function AuthForm() {
   // uncontrolled email/password when only the invite code was wrong.
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [invite, setInvite] = useState("");
+  const [invite, setInvite] = useState(initialInvite);
 
   const isSignup = mode === "signup";
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-orange-100/70 bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-extrabold text-stone-800">Mi Dashboard</h1>
-      <p className="mt-1 text-sm text-stone-400">
+    <div className="w-full max-w-sm rounded-lg border border-line bg-paper p-6">
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">Flow Habit System</h1>
+      <p className="mt-1 text-sm text-ink-3">
         {isSignup
           ? "Crea tu cuenta para empezar."
           : "Inicia sesion para continuar."}
@@ -35,7 +37,7 @@ export default function AuthForm() {
         <div>
           <label
             htmlFor="email"
-            className="mb-1 block text-sm font-semibold text-stone-600"
+            className="mb-1 block text-xs font-medium text-ink-2"
           >
             Correo
           </label>
@@ -47,14 +49,14 @@ export default function AuthForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-orange-100 bg-orange-50/40 px-3 py-2 text-base text-stone-800 outline-none focus:border-orange-400"
+            className="w-full rounded-md border border-line-2 bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-ink"
           />
         </div>
 
         <div>
           <label
             htmlFor="password"
-            className="mb-1 block text-sm font-semibold text-stone-600"
+            className="mb-1 block text-xs font-medium text-ink-2"
           >
             Contrasena
           </label>
@@ -67,7 +69,7 @@ export default function AuthForm() {
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-orange-100 bg-orange-50/40 px-3 py-2 text-base text-stone-800 outline-none focus:border-orange-400"
+            className="w-full rounded-md border border-line-2 bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-ink"
           />
         </div>
 
@@ -75,7 +77,7 @@ export default function AuthForm() {
           <div>
             <label
               htmlFor="invite"
-              className="mb-1 block text-sm font-semibold text-stone-600"
+              className="mb-1 block text-xs font-medium text-ink-2"
             >
               Codigo de invitacion
             </label>
@@ -84,15 +86,17 @@ export default function AuthForm() {
               name="invite"
               type="text"
               required
+              autoCapitalize="characters"
+              spellCheck={false}
               value={invite}
               onChange={(e) => setInvite(e.target.value)}
-              className="w-full rounded-lg border border-orange-100 bg-orange-50/40 px-3 py-2 text-base text-stone-800 outline-none focus:border-orange-400"
+              className="w-full rounded-md border border-line-2 bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-ink"
             />
           </div>
         )}
 
         {state?.error && (
-          <p className="text-sm text-red-500" role="alert">
+          <p className="text-sm text-danger" role="alert">
             {state.error}
           </p>
         )}
@@ -100,7 +104,7 @@ export default function AuthForm() {
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-full bg-orange-500 px-4 py-2 text-base font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
+          className="w-full rounded-md bg-ink px-4 py-2 text-sm font-medium text-paper transition-colors hover:bg-ink/85 disabled:opacity-60"
         >
           {pending
             ? "Un momento..."
@@ -110,12 +114,12 @@ export default function AuthForm() {
         </button>
       </form>
 
-      <p className="mt-5 text-center text-sm text-stone-500">
+      <p className="mt-5 text-center text-sm text-ink-2">
         {isSignup ? "Ya tienes cuenta?" : "No tienes cuenta?"}{" "}
         <button
           type="button"
           onClick={() => setMode(isSignup ? "signin" : "signup")}
-          className="font-semibold text-orange-600 hover:text-orange-700"
+          className="font-medium text-ink underline underline-offset-4 hover:text-ink-2"
         >
           {isSignup ? "Iniciar sesion" : "Crear cuenta"}
         </button>

@@ -1,4 +1,46 @@
-# Agent Handoff: Personal Growth Canvas
+# Agent Handoff: Flow Habit System dashboard
+
+> **Sept 2026 — repo moved and reshaped.** This project now lives at
+> `carlosmegana/fhsdashboard` (owner: Carlos). It was imported from the
+> original `behavior-tracking-dashboard` and then changed as follows. The
+> sections below the rule are the original notes and remain accurate for
+> everything they describe (data layer, habit reset model, mutation patterns).
+>
+> **What changed**
+> - **Four pages, one app shell.** `src/app/(app)/layout.tsx` renders `AppNav`
+>   (Daily · Weekly · Monthly · Yearly, plus Admin for admins and sign-out) and
+>   a content column. Daily (`/`) is the original dashboard; `/weekly`,
+>   `/monthly`, `/yearly` are placeholders (`ComingSoon`) whose content is
+>   being defined page by page with the owner. `Dashboard.tsx` no longer owns
+>   a header or sign-out; it renders a page title row + the five cards.
+> - **Restyle to a paper-like look (reference: tweek.so).** All colors go
+>   through tokens in `globals.css` (`@theme`: paper, paper-2, line, line-2,
+>   ink, ink-2, ink-3, good, danger, note, note-line). Font is Inter. No
+>   orange/stone/amber classes remain; do not reintroduce raw palette classes.
+>   Lists use `divide-y divide-line`; cards are `rounded-lg border border-line`.
+> - **Owner role + streamlined invites** (`0004_invites_v2.sql`).
+>   `profiles.is_admin`; the FIRST user ever created becomes admin via the
+>   `handle_new_user` trigger. `invites` gained `max_uses`, `use_count`,
+>   `expires_at`, `revoked_at`, `created_by`; new `invite_redemptions` table
+>   (RLS on, no policies, service-role only). `claim_invite(code, user, email)`
+>   is a security-definer function that atomically consumes one use; signup
+>   calls it via `admin.rpc` and rolls back the user on `false`.
+> - **Admin page** at `/admin` (`requireAdmin()` in `src/lib/auth.ts` gates the
+>   page and its server actions). Create invites (label / uses / expiry),
+>   copy links, revoke, see recent signups. Invite links are
+>   `/login?invite=CODE`; `login/page.tsx` reads `searchParams` (a Promise in
+>   Next 16) and `AuthForm` opens in signup mode pre-filled.
+> - **Copy language is Spanglish by design.** Existing card copy stays Spanish
+>   without accents; new structural UI (nav, admin) is English. Ask the owner
+>   before renaming labels.
+> - **Verification without a real Supabase**: a ~60-line mock of
+>   `/auth/v1/user` and `/rest/v1/*` plus a hand-built `sb-<ref>-auth-token`
+>   cookie (`base64-` + base64url JSON session with a decodable fake JWT) is
+>   enough to drive `next start` with Playwright and screenshot every page.
+> - Docs: `SETUP.md` (Supabase + Vercel + first account + inviting),
+>   `.env.example`. README rewritten.
+
+---
 
 **Status:** Live. The app has **Supabase email + password auth** and a **Postgres backend** (previously localStorage, single implicit user). Signups are **invite-only**. Auth + DB + invite flow were verified end-to-end with headless Playwright (all checks green). **Keystone habits are now optionally measurable with per-habit daily/weekly/monthly reset cadences** (migration `0003`, applied); the new schema + write paths (config, progress, cadence, check constraint) were verified live against Postgres. This document brings a new agent up to speed on the current state, conventions, and gotchas.
 

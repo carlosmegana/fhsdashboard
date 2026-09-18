@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { inviteStatus, normalizeInviteCode, type InviteRow } from "@/lib/invites";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,17 +34,20 @@ export async function signIn(
   redirect("/");
 }
 
+const INVALID_INVITE = "Codigo de invitacion invalido, vencido o ya usado.";
+
 // Invite-only signup. Public signups are disabled in Supabase, so the account is
-// created via the Admin API (service role) only after a valid, unused invite code
-// is confirmed. The code is then atomically claimed; on any failure the just-
-// created user is rolled back so a code is never burned without an account.
+// created via the Admin API (service role) only after a valid invite code is
+// confirmed. One use of the code is then claimed atomically (claim_invite);
+// on any failure the just-created user is rolled back so a use is never burned
+// without an account.
 export async function signUp(
   _prev: AuthState,
   formData: FormData
 ): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const code = String(formData.get("invite") ?? "").trim();
+  const code = normalizeInviteCode(String(formData.get("invite") ?? ""));
 
   if (!email || !password) {
     return { error: "Ingresa tu correo y contrasena." };
@@ -60,12 +64,12 @@ export async function signUp(
   // 1. Fast pre-check for a friendly error before creating anything.
   const { data: invite } = await admin
     .from("invites")
-    .select("code, used_by")
+    .select("code, note, max_uses, use_count, expires_at, revoked_at, created_at")
     .eq("code", code)
-    .maybeSingle();
+    .maybeSingle<InviteRow>();
 
-  if (!invite || invite.used_by) {
-    return { error: "Codigo de invitacion invalido o ya usado." };
+  if (!invite || inviteStatus(invite) !== "active") {
+    return { error: INVALID_INVITE };
   }
 
   // 2. Create the confirmed user (Admin API bypasses the disabled-signup block).
@@ -79,19 +83,18 @@ export async function signUp(
     return { error: "No se pudo crear la cuenta. El correo podria ya existir." };
   }
 
-  // 3. Atomically claim the code. The `used_by is null` guard makes this safe
-  //    against a second signup racing for the same code.
-  const { data: claimed } = await admin
-    .from("invites")
-    .update({ used_by: created.user.id, used_at: new Date().toISOString() })
-    .eq("code", code)
-    .is("used_by", null)
-    .select("code");
+  // 3. Atomically claim one use. The function re-checks every condition inside
+  //    the UPDATE, so a second signup racing for the last use loses cleanly.
+  const { data: claimed, error: claimErr } = await admin.rpc("claim_invite", {
+    p_code: code,
+    p_user_id: created.user.id,
+    p_email: email,
+  });
 
-  if (!claimed || claimed.length === 0) {
+  if (claimErr || claimed !== true) {
     // Lost the race (or code vanished) — roll back the user we just made.
     await admin.auth.admin.deleteUser(created.user.id);
-    return { error: "Codigo de invitacion invalido o ya usado." };
+    return { error: INVALID_INVITE };
   }
 
   // 4. Establish a session (sets auth cookies via the SSR server client).

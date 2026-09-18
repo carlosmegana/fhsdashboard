@@ -15,8 +15,8 @@ export default function NoteButton({ hasNote, open, onToggle }: NoteButtonProps)
       onClick={onToggle}
       className={`shrink-0 p-1 transition-opacity ${
         hasNote
-          ? "text-amber-500 hover:text-amber-600"
-          : "text-stone-400 hover:text-amber-500 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+          ? "text-ink hover:text-ink"
+          : "text-ink-3 hover:text-ink md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
       }`}
     >
       <svg

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { signOut } from "@/app/auth/actions";
 import { formatDisplayDate } from "@/lib/date";
 import {
   deleteItem as dbDeleteItem,
@@ -53,7 +52,7 @@ function updateCategory(
 
 function EmptyState() {
   return (
-    <p className="py-2 text-center italic text-stone-400">
+    <p className="py-3 text-center text-sm text-ink-3">
       Sin elementos. Agrega uno nuevo.
     </p>
   );
@@ -240,159 +239,150 @@ export default function Dashboard() {
   });
 
   return (
-    <main className="min-h-screen p-4 md:p-6">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-4 flex items-baseline justify-between gap-4">
-          <h1 className="text-2xl font-extrabold text-stone-800">Mi Dashboard</h1>
-          <div className="flex items-center gap-3">
-            {data && (
-              <p className="rounded-full bg-white px-3 py-1 text-sm text-stone-500 shadow-sm">
-                {formatDisplayDate(new Date())}
-              </p>
-            )}
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="rounded-full px-3 py-1 text-sm font-semibold text-stone-500 transition-colors hover:bg-white hover:text-stone-700 hover:shadow-sm"
-              >
-                Cerrar sesion
-              </button>
-            </form>
-          </div>
-        </header>
-
-        {!data ? (
-          <div
-            className="grid grid-cols-1 gap-4 md:grid-cols-3"
-            aria-hidden="true"
-          >
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-48 animate-pulse rounded-2xl border border-orange-100/70 bg-white"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <DashboardCard
-              title="Habitos Clave"
-              description="Rutinas que sostienen todo lo demas. Cada una se reinicia segun su ritmo: diario, semanal o mensual."
-              className="md:order-1"
-            >
-              {data.categories.keystone_habits.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <ul className="space-y-2">
-                  {data.categories.keystone_habits.map((item) => (
-                    <HabitItem
-                      key={item.id}
-                      item={item}
-                      onToggle={(checked) =>
-                        setCompleted("keystone_habits", item.id, checked)
-                      }
-                      onAdjust={(delta) => adjustProgress(item.id, delta)}
-                      onSaveConfig={(config) =>
-                        saveHabitConfig(item.id, config)
-                      }
-                      {...itemHandlers("keystone_habits", item.id)}
-                    />
-                  ))}
-                </ul>
-              )}
-              <AddItemButton onClick={() => addItem("keystone_habits")} />
-            </DashboardCard>
-
-            <DashboardCard
-              title="Valores"
-              description="Los principios que guian tus decisiones."
-              className="md:order-2"
-            >
-              {data.categories.valores.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <ul className="space-y-2">
-                  {data.categories.valores.map((item) => (
-                    <ListItem
-                      key={item.id}
-                      item={item}
-                      {...itemHandlers("valores", item.id)}
-                    />
-                  ))}
-                </ul>
-              )}
-              <AddItemButton onClick={() => addItem("valores")} />
-            </DashboardCard>
-
-            <DashboardCard
-              title="Metas"
-              description="Objetivos a mediano y largo plazo."
-              className="md:order-5"
-            >
-              {data.categories.metas.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <ul className="space-y-2">
-                  {data.categories.metas.map((item) => (
-                    <ListItem
-                      key={item.id}
-                      item={item}
-                      {...itemHandlers("metas", item.id)}
-                    />
-                  ))}
-                </ul>
-              )}
-              <AddItemButton onClick={() => addItem("metas")} />
-            </DashboardCard>
-
-            <DashboardCard
-              title="Problemas"
-              description="Patrones y retos en los que estas trabajando."
-              className="md:order-4"
-            >
-              {data.categories.issues.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <ul className="space-y-2">
-                  {data.categories.issues.map((item) => (
-                    <ListItem
-                      key={item.id}
-                      item={item}
-                      {...itemHandlers("issues", item.id)}
-                    />
-                  ))}
-                </ul>
-              )}
-              <AddItemButton onClick={() => addItem("issues")} />
-            </DashboardCard>
-
-            <DashboardCard
-              title="Tareas"
-              description="Pendientes concretos. Se mantienen hasta que los completes."
-              className="md:order-3 md:row-span-2"
-              fillHeight
-            >
-              {data.categories.tasks.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <ul className="space-y-2">
-                  {data.categories.tasks.map((item) => (
-                    <TaskItem
-                      key={item.id}
-                      item={item}
-                      onToggle={(checked) =>
-                        setCompleted("tasks", item.id, checked)
-                      }
-                      {...itemHandlers("tasks", item.id)}
-                    />
-                  ))}
-                </ul>
-              )}
-              <AddItemButton onClick={() => addItem("tasks")} />
-            </DashboardCard>
-          </div>
+    <>
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">Daily</h1>
+          <p className="mt-0.5 text-sm text-ink-3">Lo que revisas cada dia.</p>
+        </div>
+        {data && (
+          <p className="text-sm tabular-nums text-ink-2">
+            {formatDisplayDate(new Date())}
+          </p>
         )}
       </div>
-    </main>
+
+      {!data ? (
+        <div
+          className="grid grid-cols-1 gap-4 md:grid-cols-3"
+          aria-hidden="true"
+        >
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-48 animate-pulse rounded-lg border border-line bg-paper-2"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <DashboardCard
+            title="Habitos Clave"
+            description="Rutinas que sostienen todo lo demas. Cada una se reinicia segun su ritmo: diario, semanal o mensual."
+            className="md:order-1"
+          >
+            {data.categories.keystone_habits.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ul className="divide-y divide-line">
+                {data.categories.keystone_habits.map((item) => (
+                  <HabitItem
+                    key={item.id}
+                    item={item}
+                    onToggle={(checked) =>
+                      setCompleted("keystone_habits", item.id, checked)
+                    }
+                    onAdjust={(delta) => adjustProgress(item.id, delta)}
+                    onSaveConfig={(config) =>
+                      saveHabitConfig(item.id, config)
+                    }
+                    {...itemHandlers("keystone_habits", item.id)}
+                  />
+                ))}
+              </ul>
+            )}
+            <AddItemButton onClick={() => addItem("keystone_habits")} />
+          </DashboardCard>
+
+          <DashboardCard
+            title="Valores"
+            description="Los principios que guian tus decisiones."
+            className="md:order-2"
+          >
+            {data.categories.valores.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ul className="divide-y divide-line">
+                {data.categories.valores.map((item) => (
+                  <ListItem
+                    key={item.id}
+                    item={item}
+                    {...itemHandlers("valores", item.id)}
+                  />
+                ))}
+              </ul>
+            )}
+            <AddItemButton onClick={() => addItem("valores")} />
+          </DashboardCard>
+
+          <DashboardCard
+            title="Metas"
+            description="Objetivos a mediano y largo plazo."
+            className="md:order-5"
+          >
+            {data.categories.metas.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ul className="divide-y divide-line">
+                {data.categories.metas.map((item) => (
+                  <ListItem
+                    key={item.id}
+                    item={item}
+                    {...itemHandlers("metas", item.id)}
+                  />
+                ))}
+              </ul>
+            )}
+            <AddItemButton onClick={() => addItem("metas")} />
+          </DashboardCard>
+
+          <DashboardCard
+            title="Problemas"
+            description="Patrones y retos en los que estas trabajando."
+            className="md:order-4"
+          >
+            {data.categories.issues.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ul className="divide-y divide-line">
+                {data.categories.issues.map((item) => (
+                  <ListItem
+                    key={item.id}
+                    item={item}
+                    {...itemHandlers("issues", item.id)}
+                  />
+                ))}
+              </ul>
+            )}
+            <AddItemButton onClick={() => addItem("issues")} />
+          </DashboardCard>
+
+          <DashboardCard
+            title="Tareas"
+            description="Pendientes concretos. Se mantienen hasta que los completes."
+            className="md:order-3 md:row-span-2"
+            fillHeight
+          >
+            {data.categories.tasks.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ul className="divide-y divide-line">
+                {data.categories.tasks.map((item) => (
+                  <TaskItem
+                    key={item.id}
+                    item={item}
+                    onToggle={(checked) =>
+                      setCompleted("tasks", item.id, checked)
+                    }
+                    {...itemHandlers("tasks", item.id)}
+                  />
+                ))}
+              </ul>
+            )}
+            <AddItemButton onClick={() => addItem("tasks")} />
+          </DashboardCard>
+        </div>
+      )}
+    </>
   );
 }

@@ -10,7 +10,7 @@ export default function DeleteButton({ onDelete }: DeleteButtonProps) {
       type="button"
       aria-label="Eliminar"
       onClick={onDelete}
-      className="shrink-0 p-1 text-stone-400 transition-opacity hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+      className="shrink-0 p-1 text-ink-3 transition-opacity hover:text-danger md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

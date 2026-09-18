@@ -31,14 +31,14 @@ export default function TaskItem({
   const noteState = useItemNote(item.note, onSaveNote);
 
   return (
-    <li className="group">
+    <li className="group py-1.5">
       <div className="flex items-center gap-2">
         <input
           type="checkbox"
           id={item.id}
           checked={item.completed}
           onChange={(e) => onToggle(e.target.checked)}
-          className="h-4 w-4 shrink-0 cursor-pointer accent-orange-500"
+          className="h-4 w-4 shrink-0 cursor-pointer accent-ink"
         />
         <label htmlFor={item.id} className="sr-only">
           {item.text || "Nuevo elemento"}
@@ -52,8 +52,8 @@ export default function TaskItem({
             onCancel={onCancel}
             className={
               item.completed
-                ? "text-base text-stone-400 line-through opacity-60"
-                : "text-base text-stone-800"
+                ? "text-[15px] text-ink-3 line-through"
+                : "text-[15px] text-ink"
             }
           />
         </div>
