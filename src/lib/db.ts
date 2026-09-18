@@ -5,8 +5,13 @@ import type {
   CategoryKey,
   Habit,
   HabitPeriod,
+  ItemCategory,
   PgcData,
+  TextItem,
+  Zone,
+  ZoneScore,
 } from "./types";
+import { DAILY_CATEGORIES } from "./types";
 
 // Data access layer backing the dashboard with Supabase Postgres (replaces the
 // old localStorage `storage.ts`). Every function takes the browser client and
@@ -134,6 +139,7 @@ export async function fetchDashboard(
   const { data, error } = await supabase
     .from("items")
     .select(ITEM_COLUMNS)
+    .in("category", DAILY_CATEGORIES)
     .order("category", { ascending: true })
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
@@ -171,15 +177,41 @@ export async function runDailyResetIfNeeded(
   return applyDueResets(supabase, (data ?? []) as ResettableHabit[]);
 }
 
+// Plain text items for one category (the lists on the Weekly / Monthly /
+// Quarterly pages). `weekStart` narrows to one week for friction items.
+export async function fetchItems(
+  supabase: SupabaseClient,
+  category: ItemCategory,
+  weekStart?: string
+): Promise<TextItem[]> {
+  let query = supabase
+    .from("items")
+    .select("id, text, note, created_at")
+    .eq("category", category);
+  if (weekStart) query = query.eq("week_start", weekStart);
+  const { data, error } = await query
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => {
+    const item: TextItem = { id: row.id, text: row.text };
+    if (row.note) item.note = row.note;
+    return item;
+  });
+}
+
 // Inserts a new item on its first real text save. Brand-new items live only in
 // local state until then, so cancelled/empty adds never touch the DB.
 export async function insertItem(
   supabase: SupabaseClient,
   id: string,
-  category: CategoryKey,
-  text: string
+  category: ItemCategory,
+  text: string,
+  extra: { week_start?: string } = {}
 ): Promise<void> {
-  const { error } = await supabase.from("items").insert({ id, category, text });
+  const { error } = await supabase
+    .from("items")
+    .insert({ id, category, text, ...extra });
   if (error) throw error;
 }
 
@@ -253,5 +285,103 @@ export async function deleteItem(
   id: string
 ): Promise<void> {
   const { error } = await supabase.from("items").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// 7 Zonas
+// ---------------------------------------------------------------------------
+
+const ZONE_COUNT = 7;
+
+// Returns the user's 7 zones in position order, creating any that are missing
+// (first visit). Names start empty; the UI shows "Zona N" until renamed.
+export async function fetchZones(supabase: SupabaseClient): Promise<Zone[]> {
+  const { data, error } = await supabase
+    .from("zones")
+    .select("id, position, name")
+    .order("position", { ascending: true });
+  if (error) throw error;
+  const zones = (data ?? []) as Zone[];
+  if (zones.length >= ZONE_COUNT) return zones;
+
+  const have = new Set(zones.map((z) => z.position));
+  const missing = [];
+  for (let p = 1; p <= ZONE_COUNT; p++) if (!have.has(p)) missing.push({ position: p });
+  // A second tab racing this insert hits the unique constraint; either way a
+  // re-read returns the full set.
+  await supabase.from("zones").insert(missing);
+  const { data: again, error: err2 } = await supabase
+    .from("zones")
+    .select("id, position, name")
+    .order("position", { ascending: true });
+  if (err2) throw err2;
+  return (again ?? []) as Zone[];
+}
+
+export async function renameZone(
+  supabase: SupabaseClient,
+  id: string,
+  name: string
+): Promise<void> {
+  const { error } = await supabase.from("zones").update({ name }).eq("id", id);
+  if (error) throw error;
+}
+
+// Every score the user has ever entered, newest month first. Small table.
+export async function fetchZoneScores(
+  supabase: SupabaseClient
+): Promise<ZoneScore[]> {
+  const { data, error } = await supabase
+    .from("zone_scores")
+    .select("zone_id, month, score")
+    .order("month", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as ZoneScore[];
+}
+
+// Upserts one zone's score for one month (month = YYYY-MM-01).
+export async function setZoneScore(
+  supabase: SupabaseClient,
+  zoneId: string,
+  month: string,
+  score: number
+): Promise<void> {
+  const { error } = await supabase
+    .from("zone_scores")
+    .upsert({ zone_id: zoneId, month, score }, { onConflict: "zone_id,month" });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Vision de Vida (profiles.life_vision)
+// ---------------------------------------------------------------------------
+
+export async function fetchLifeVision(supabase: SupabaseClient): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return "";
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("life_vision")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.life_vision ?? "";
+}
+
+export async function saveLifeVision(
+  supabase: SupabaseClient,
+  text: string
+): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const { error } = await supabase
+    .from("profiles")
+    .update({ life_vision: text })
+    .eq("id", user.id);
   if (error) throw error;
 }

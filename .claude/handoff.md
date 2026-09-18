@@ -28,6 +28,22 @@
 >   (harmless, unused). `0004` also adds `profiles.is_admin` and makes the
 >   FIRST user admin via `handle_new_user`; `getCurrentUser()` in
 >   `src/lib/auth.ts` exposes it but nothing renders on it yet.
+> - **Horizon pages** (`0005_horizons.sql`). Design rule from the owner's doc:
+>   *each page writes what the page below reads; nothing is written twice.*
+>   Read zones use `ReadOnlyList`, write zones use `ItemList` (a one-category
+>   version of the Dashboard patterns). New `items` categories: `friction`
+>   (weekly, scoped by `items.week_start` = Monday), `root_issues`,
+>   `quarter_goals`, `year_goals`, `three_year_goals`. `fetchDashboard` now
+>   filters to `DAILY_CATEGORIES`. Tables `zones` (7 per user, created
+>   lazily by `fetchZones`, names editable) and `zone_scores` (1-10 per zone
+>   per month, upsert on `zone_id,month`). `profiles.life_vision` is a single
+>   textarea saved on blur. Page contents: Weekly = Metas del Mes (read, from
+>   Daily's `metas`), 7 Zonas last score (read), Friccion (write). Monthly =
+>   Metas del Trimestre + del Ano (read), 7 Zonas score (write), Issues Raiz
+>   (write). Quarterly & Yearly = Vision de Vida, Metas a 3 Anos / del Ano /
+>   del Trimestre (write). Daily card titles: "Keystone Habits" and "Metas
+>   del Mes" per the doc. Still open (owner's call): Energia, Issue en Foco,
+>   week-scoped Tareas, Creencias, zone trend on the yearly page.
 > - **Copy language is Spanglish by design.** Existing card copy stays Spanish
 >   without accents; new structural UI (nav) is English. Ask the owner
 >   before renaming labels.

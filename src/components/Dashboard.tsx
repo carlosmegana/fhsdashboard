@@ -267,7 +267,7 @@ export default function Dashboard() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <DashboardCard
-            title="Habitos Clave"
+            title="Keystone Habits"
             description="Rutinas que sostienen todo lo demas. Cada una se reinicia segun su ritmo: diario, semanal o mensual."
             className="md:order-1"
           >
@@ -316,7 +316,7 @@ export default function Dashboard() {
           </DashboardCard>
 
           <DashboardCard
-            title="Metas"
+            title="Metas del Mes"
             description="Objetivos a mediano y largo plazo."
             className="md:order-5"
           >

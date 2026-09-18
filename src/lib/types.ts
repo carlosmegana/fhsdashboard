@@ -44,12 +44,53 @@ export interface PgcData {
   categories: Categories;
 }
 
+// The five categories shown on the Daily page.
 export type CategoryKey = keyof Categories;
 
-export const CATEGORY_PREFIXES: Record<CategoryKey, string> = {
+// Every category stored in `items`, including the ones the other pages own:
+//   friction         weekly, scoped by week_start
+//   root_issues      monthly, permanent list
+//   quarter_goals    written quarterly, read monthly
+//   year_goals       written yearly, read monthly
+//   three_year_goals written yearly
+export type ItemCategory =
+  | CategoryKey
+  | "friction"
+  | "root_issues"
+  | "quarter_goals"
+  | "year_goals"
+  | "three_year_goals";
+
+export const DAILY_CATEGORIES: CategoryKey[] = [
+  "keystone_habits",
+  "issues",
+  "valores",
+  "metas",
+  "tasks",
+];
+
+export const CATEGORY_PREFIXES: Record<ItemCategory, string> = {
   keystone_habits: "kh",
   issues: "is",
   valores: "vl",
   metas: "mt",
   tasks: "tk",
+  friction: "fr",
+  root_issues: "ri",
+  quarter_goals: "qg",
+  year_goals: "yg",
+  three_year_goals: "tg",
 };
+
+// One of the user's 7 life zones, scored monthly.
+export interface Zone {
+  id: string;
+  position: number; // 1..7
+  name: string;
+}
+
+export interface ZoneScore {
+  zone_id: string;
+  month: string; // YYYY-MM-01
+  score: number; // 1..10
+}
