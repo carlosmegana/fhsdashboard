@@ -13,13 +13,13 @@ const PAGES = [
   { href: "/yearly", label: "Yearly" },
 ] as const;
 
-export default function AppNav({ isAdmin }: { isAdmin: boolean }) {
+export default function AppNav() {
   const pathname = usePathname();
 
   return (
     <header className="border-b border-line bg-paper">
       {/*
-        One row on desktop: brand · tabs · actions. On phones the tabs wrap to
+        One row on desktop: brand · tabs · sign-out. On phones the tabs wrap to
         their own full-width row under the brand so nothing gets squeezed.
       */}
       <div className="mx-auto flex max-w-5xl flex-wrap items-center px-4 md:px-6">
@@ -54,19 +54,6 @@ export default function AppNav({ isAdmin }: { isAdmin: boolean }) {
         </nav>
 
         <div className="order-2 ml-auto flex shrink-0 items-center gap-1 md:order-3">
-          {isAdmin && (
-            <Link
-              href="/admin"
-              aria-current={pathname === "/admin" ? "page" : undefined}
-              className={`rounded-md px-2.5 py-1.5 text-sm transition-colors ${
-                pathname === "/admin"
-                  ? "bg-paper-2 text-ink"
-                  : "text-ink-3 hover:bg-paper-2 hover:text-ink"
-              }`}
-            >
-              Admin
-            </Link>
-          )}
           <form action={signOut}>
             <button
               type="submit"

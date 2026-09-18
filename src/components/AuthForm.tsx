@@ -5,10 +5,8 @@ import { signIn, signUp, type AuthState } from "@/app/login/actions";
 
 type Mode = "signin" | "signup";
 
-// `initialInvite` comes from an invite link (/login?invite=CODE): the form then
-// opens in signup mode with the code pre-filled.
-export default function AuthForm({ initialInvite = "" }: { initialInvite?: string }) {
-  const [mode, setMode] = useState<Mode>(initialInvite ? "signup" : "signin");
+export default function AuthForm() {
+  const [mode, setMode] = useState<Mode>("signin");
   const action = mode === "signin" ? signIn : signUp;
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     action,
@@ -17,10 +15,9 @@ export default function AuthForm({ initialInvite = "" }: { initialInvite?: strin
 
   // Controlled so values survive a failed submit — React 19 resets a
   // <form action> after the action runs, which would otherwise wipe an
-  // uncontrolled email/password when only the invite code was wrong.
+  // uncontrolled email/password on any validation error.
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [invite, setInvite] = useState(initialInvite);
 
   const isSignup = mode === "signup";
 
@@ -73,27 +70,6 @@ export default function AuthForm({ initialInvite = "" }: { initialInvite?: strin
           />
         </div>
 
-        {isSignup && (
-          <div>
-            <label
-              htmlFor="invite"
-              className="mb-1 block text-xs font-medium text-ink-2"
-            >
-              Codigo de invitacion
-            </label>
-            <input
-              id="invite"
-              name="invite"
-              type="text"
-              required
-              autoCapitalize="characters"
-              spellCheck={false}
-              value={invite}
-              onChange={(e) => setInvite(e.target.value)}
-              className="w-full rounded-md border border-line-2 bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-ink"
-            />
-          </div>
-        )}
 
         {state?.error && (
           <p className="text-sm text-danger" role="alert">

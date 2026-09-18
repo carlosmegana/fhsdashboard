@@ -1,8 +1,7 @@
-import { redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
 
-// Server-side helpers for the signed-in user. Both read through the SSR client,
-// so Row Level Security applies (a user can only read their own profile row).
+// Server-side helper for the signed-in user. Reads through the SSR client, so
+// Row Level Security applies (a user can only read their own profile row).
 
 export interface CurrentUser {
   id: string;
@@ -10,9 +9,10 @@ export interface CurrentUser {
   isAdmin: boolean;
 }
 
-// Returns the signed-in user with their admin flag, or null when signed out.
-// A missing profiles row (or a DB without the is_admin column yet) reads as
-// not-admin rather than failing the page.
+// Returns the signed-in user, or null when signed out. `isAdmin` comes from
+// profiles.is_admin (the first account ever created gets it automatically).
+// Nothing in the UI uses it yet; it is here for future owner-only features.
+// A missing profiles row reads as not-admin rather than failing the page.
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = await createClient();
   const {
@@ -31,13 +31,4 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     email: user.email ?? "",
     isAdmin: profile?.is_admin === true,
   };
-}
-
-// Gate for owner-only pages and server actions. Signed-out users go to /login;
-// signed-in non-admins go back to the dashboard.
-export async function requireAdmin(): Promise<CurrentUser> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  if (!user.isAdmin) redirect("/");
-  return user;
 }

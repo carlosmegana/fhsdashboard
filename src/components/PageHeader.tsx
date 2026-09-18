@@ -6,7 +6,7 @@ interface PageHeaderProps {
   aside?: ReactNode;
 }
 
-// Page title row shared by all four horizon pages and the admin page.
+// Page title row shared by all four horizon pages.
 export default function PageHeader({ title, subtitle, aside }: PageHeaderProps) {
   return (
     <div className="mb-6 flex items-end justify-between gap-4">

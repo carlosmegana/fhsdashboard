@@ -8,7 +8,7 @@
 >
 > **What changed**
 > - **Four pages, one app shell.** `src/app/(app)/layout.tsx` renders `AppNav`
->   (Daily · Weekly · Monthly · Yearly, plus Admin for admins and sign-out) and
+>   (Daily · Weekly · Monthly · Yearly, plus sign-out) and
 >   a content column. Daily (`/`) is the original dashboard; `/weekly`,
 >   `/monthly`, `/yearly` are placeholders (`ComingSoon`) whose content is
 >   being defined page by page with the owner. `Dashboard.tsx` no longer owns
@@ -18,27 +18,24 @@
 >   ink, ink-2, ink-3, good, danger, note, note-line). Font is Inter. No
 >   orange/stone/amber classes remain; do not reintroduce raw palette classes.
 >   Lists use `divide-y divide-line`; cards are `rounded-lg border border-line`.
-> - **Owner role + streamlined invites** (`0004_invites_v2.sql`).
->   `profiles.is_admin`; the FIRST user ever created becomes admin via the
->   `handle_new_user` trigger. `invites` gained `max_uses`, `use_count`,
->   `expires_at`, `revoked_at`, `created_by`; new `invite_redemptions` table
->   (RLS on, no policies, service-role only). `claim_invite(code, user, email)`
->   is a security-definer function that atomically consumes one use; signup
->   calls it via `admin.rpc` and rolls back the user on `false`.
-> - **Admin page** at `/admin` (`requireAdmin()` in `src/lib/auth.ts` gates the
->   page and its server actions). Create invites (label / uses / expiry),
->   copy links, revoke, see recent signups. Invite links are
->   `/login?invite=CODE`; `login/page.tsx` reads `searchParams` (a Promise in
->   Next 16) and `AuthForm` opens in signup mode pre-filled.
+> - **Signup is OPEN; the invite system is gone from the app.** The owner
+>   decided invites were friction, not protection. `signUp` now calls
+>   `supabase.auth.signUp` through the SSR client (no service-role key, no
+>   `admin.ts`, no `SUPABASE_SERVICE_ROLE_KEY` env var). Whether accounts can
+>   be created is the Supabase switch "Allow new users to sign up"; when OFF
+>   the action maps `signup_disabled` to a friendly message. Migrations
+>   `0002`/`0004` still create `invites`/`invite_redemptions`/`claim_invite`
+>   (harmless, unused). `0004` also adds `profiles.is_admin` and makes the
+>   FIRST user admin via `handle_new_user`; `getCurrentUser()` in
+>   `src/lib/auth.ts` exposes it but nothing renders on it yet.
 > - **Copy language is Spanglish by design.** Existing card copy stays Spanish
->   without accents; new structural UI (nav, admin) is English. Ask the owner
+>   without accents; new structural UI (nav) is English. Ask the owner
 >   before renaming labels.
 > - **Verification without a real Supabase**: a ~60-line mock of
 >   `/auth/v1/user` and `/rest/v1/*` plus a hand-built `sb-<ref>-auth-token`
 >   cookie (`base64-` + base64url JSON session with a decodable fake JWT) is
 >   enough to drive `next start` with Playwright and screenshot every page.
-> - Docs: `SETUP.md` (Supabase + Vercel + first account + inviting),
->   `.env.example`. README rewritten.
+> - Docs: `SETUP.md` (Supabase + Vercel), `.env.example`. README rewritten.
 
 ---
 
