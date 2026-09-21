@@ -82,6 +82,24 @@ export const CATEGORY_PREFIXES: Record<ItemCategory, string> = {
   three_year_goals: "tg",
 };
 
+// The 7 zones of the Flow Habit System, in order. New accounts start with
+// these names; a user can rename any of them on the Monthly page. Keep this
+// list in sync with the seed block in 0005_horizons.sql.
+export const DEFAULT_ZONE_NAMES = [
+  "Salud",
+  "Amor",
+  "Crecimiento",
+  "Trabajo",
+  "Dinero",
+  "Experiencias",
+  "Trascendencia",
+] as const;
+
+// The default name for a 1-based zone position.
+export function defaultZoneName(position: number): string {
+  return DEFAULT_ZONE_NAMES[position - 1] ?? `Zona ${position}`;
+}
+
 // One of the user's 7 life zones, scored monthly.
 export interface Zone {
   id: string;

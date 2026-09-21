@@ -11,7 +11,7 @@ import type {
   Zone,
   ZoneScore,
 } from "./types";
-import { DAILY_CATEGORIES } from "./types";
+import { DAILY_CATEGORIES, defaultZoneName } from "./types";
 
 // Data access layer backing the dashboard with Supabase Postgres (replaces the
 // old localStorage `storage.ts`). Every function takes the browser client and
@@ -295,7 +295,8 @@ export async function deleteItem(
 const ZONE_COUNT = 7;
 
 // Returns the user's 7 zones in position order, creating any that are missing
-// (first visit). Names start empty; the UI shows "Zona N" until renamed.
+// (first visit) pre-named with the FHS defaults. The migration seeds accounts
+// that already existed; this covers every account created afterwards.
 export async function fetchZones(supabase: SupabaseClient): Promise<Zone[]> {
   const { data, error } = await supabase
     .from("zones")
@@ -307,7 +308,9 @@ export async function fetchZones(supabase: SupabaseClient): Promise<Zone[]> {
 
   const have = new Set(zones.map((z) => z.position));
   const missing = [];
-  for (let p = 1; p <= ZONE_COUNT; p++) if (!have.has(p)) missing.push({ position: p });
+  for (let p = 1; p <= ZONE_COUNT; p++) {
+    if (!have.has(p)) missing.push({ position: p, name: defaultZoneName(p) });
+  }
   // A second tab racing this insert hits the unique constraint; either way a
   // re-read returns the full set.
   await supabase.from("zones").insert(missing);

@@ -6,13 +6,13 @@ import { periodStartStr } from "@/lib/date";
 import { fetchZoneScores, fetchZones, renameZone, setZoneScore } from "@/lib/db";
 import { classifyLoadError, type LoadFailure } from "@/lib/loadError";
 import { createClient } from "@/lib/supabase/client";
-import type { Zone, ZoneScore } from "@/lib/types";
+import { defaultZoneName, type Zone, type ZoneScore } from "@/lib/types";
 import LoadError from "./LoadError";
 
 const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 function zoneLabel(zone: Zone): string {
-  return zone.name.trim() || `Zona ${zone.position}`;
+  return zone.name.trim() || defaultZoneName(zone.position);
 }
 
 function monthLabel(month: string): string {
@@ -112,7 +112,7 @@ export function ZonesScoreCard() {
               <input
                 type="text"
                 defaultValue={zone.name}
-                placeholder={`Zona ${zone.position}`}
+                placeholder={defaultZoneName(zone.position)}
                 aria-label={`Nombre de la zona ${zone.position}`}
                 onBlur={(e) => {
                   if (e.currentTarget.value.trim() !== zone.name) rename(zone.id, e.currentTarget.value);

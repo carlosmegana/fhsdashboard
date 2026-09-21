@@ -35,7 +35,10 @@
 >   (weekly, scoped by `items.week_start` = Monday), `root_issues`,
 >   `quarter_goals`, `year_goals`, `three_year_goals`. `fetchDashboard` now
 >   filters to `DAILY_CATEGORIES`. Tables `zones` (7 per user, created
->   lazily by `fetchZones`, names editable) and `zone_scores` (1-10 per zone
+>   lazily by `fetchZones`, pre-named from `DEFAULT_ZONE_NAMES` in types.ts:
+>   Salud · Amor · Crecimiento · Trabajo · Dinero · Experiencias ·
+>   Trascendencia — keep that list in sync with the seed block in 0005;
+>   names stay editable) and `zone_scores` (1-10 per zone
 >   per month, upsert on `zone_id,month`). `profiles.life_vision` is a single
 >   textarea saved on blur. Page contents: Weekly = Metas del Mes (read, from
 >   Daily's `metas`), 7 Zonas last score (read), Friccion (write). Monthly =
@@ -51,6 +54,11 @@
 >   as `missing_schema`, which renders "aplica la migracion 0005" — an
 >   un-migrated database used to look identical to an empty page. Keep this
 >   pattern on any new data component.
+> - **Migrations are applied by hand in the Supabase SQL editor**, so every
+>   file must be safely re-runnable: `create policy` has no IF NOT EXISTS, so
+>   each one is preceded by `drop policy if exists`. All five were verified by
+>   running them twice against a real Postgres 16 with stubbed `auth.users` /
+>   `auth.uid()`; do the same before shipping a new migration.
 > - **Copy language is Spanglish by design.** Existing card copy stays Spanish
 >   without accents; new structural UI (nav) is English. Ask the owner
 >   before renaming labels.
