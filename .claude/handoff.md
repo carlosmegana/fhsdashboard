@@ -44,6 +44,13 @@
 >   del Trimestre (write). Daily card titles: "Keystone Habits" and "Metas
 >   del Mes" per the doc. Still open (owner's call): Energia, Issue en Foco,
 >   week-scoped Tareas, Creencias, zone trend on the yearly page.
+> - **Every page-level read must surface its failure.** `ItemList`,
+>   `ReadOnlyList`, `ZonesCard` and `LifeVisionCard` catch the initial fetch
+>   and render `LoadError` instead of leaving a skeleton pulsing forever.
+>   `src/lib/loadError.ts` classifies PostgREST `PGRST205/PGRST202/42P01/42703`
+>   as `missing_schema`, which renders "aplica la migracion 0005" — an
+>   un-migrated database used to look identical to an empty page. Keep this
+>   pattern on any new data component.
 > - **Copy language is Spanglish by design.** Existing card copy stays Spanish
 >   without accents; new structural UI (nav) is English. Ask the owner
 >   before renaming labels.

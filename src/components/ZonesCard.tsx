@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { periodStartStr } from "@/lib/date";
 import { fetchZoneScores, fetchZones, renameZone, setZoneScore } from "@/lib/db";
+import { classifyLoadError, type LoadFailure } from "@/lib/loadError";
 import { createClient } from "@/lib/supabase/client";
 import type { Zone, ZoneScore } from "@/lib/types";
+import LoadError from "./LoadError";
 
 const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -26,19 +28,31 @@ interface State {
 function useZones() {
   const supabase = useMemo(() => createClient(), []);
   const [state, setState] = useState<State | null>(null);
+  const [error, setError] = useState<LoadFailure | null>(null);
 
-  const reload = () =>
-    Promise.all([fetchZones(supabase), fetchZoneScores(supabase)]).then(
-      ([zones, scores]) => setState({ zones, scores })
-    );
+  const reload = () => {
+    setError(null);
+    return Promise.all([fetchZones(supabase), fetchZoneScores(supabase)])
+      .then(([zones, scores]) => setState({ zones, scores }))
+      .catch((err) => {
+        console.error("[zones] load failed", err);
+        setError(classifyLoadError(err));
+      });
+  };
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchZones(supabase), fetchZoneScores(supabase)]).then(
-      ([zones, scores]) => {
+    Promise.all([fetchZones(supabase), fetchZoneScores(supabase)])
+      .then(([zones, scores]) => {
         if (active) setState({ zones, scores });
-      }
-    );
+      })
+      .catch((err) => {
+        // Before migration 0005 the zones tables do not exist; say so instead
+        // of pulsing a skeleton forever.
+        if (!active) return;
+        console.error("[zones] load failed", err);
+        setError(classifyLoadError(err));
+      });
     return () => {
       active = false;
     };
@@ -51,13 +65,15 @@ function useZones() {
     });
   };
 
-  return { supabase, state, setState, persist };
+  return { supabase, state, setState, error, reload, persist };
 }
 
 // Monthly page: name the 7 zones (once) and score each 1-10 for this month.
 export function ZonesScoreCard() {
-  const { supabase, state, setState, persist } = useZones();
+  const { supabase, state, setState, error, reload, persist } = useZones();
   const month = periodStartStr("monthly");
+
+  if (error) return <LoadError kind={error} onRetry={reload} />;
 
   if (!state) {
     return <div className="h-40 animate-pulse rounded-md bg-paper-2" aria-hidden="true" />;
@@ -141,7 +157,9 @@ export function ZonesScoreCard() {
 
 // Weekly page: the most recent month that has any score, read-only.
 export function ZonesReadCard() {
-  const { state } = useZones();
+  const { state, error, reload } = useZones();
+
+  if (error) return <LoadError kind={error} onRetry={reload} />;
 
   if (!state) {
     return <div className="h-40 animate-pulse rounded-md bg-paper-2" aria-hidden="true" />;

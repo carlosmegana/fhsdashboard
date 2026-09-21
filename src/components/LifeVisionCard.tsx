@@ -2,19 +2,38 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchLifeVision, saveLifeVision } from "@/lib/db";
+import { classifyLoadError, type LoadFailure } from "@/lib/loadError";
 import { createClient } from "@/lib/supabase/client";
+import LoadError from "./LoadError";
 
 // One free-text field, saved when the textarea loses focus.
 export default function LifeVisionCard() {
   const supabase = useMemo(() => createClient(), []);
   const [text, setText] = useState<string | null>(null);
+  const [error, setError] = useState<LoadFailure | null>(null);
   const [saved, setSaved] = useState(false);
+
+  const load = () => {
+    setError(null);
+    return fetchLifeVision(supabase)
+      .then(setText)
+      .catch((err) => {
+        console.error("[life_vision] load failed", err);
+        setError(classifyLoadError(err));
+      });
+  };
 
   useEffect(() => {
     let active = true;
-    fetchLifeVision(supabase).then((t) => {
-      if (active) setText(t);
-    });
+    fetchLifeVision(supabase)
+      .then((t) => {
+        if (active) setText(t);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error("[life_vision] load failed", err);
+        setError(classifyLoadError(err));
+      });
     return () => {
       active = false;
     };
@@ -25,6 +44,8 @@ export default function LifeVisionCard() {
     const t = setTimeout(() => setSaved(false), 1500);
     return () => clearTimeout(t);
   }, [saved]);
+
+  if (error) return <LoadError kind={error} onRetry={load} />;
 
   if (text === null) {
     return <div className="h-32 animate-pulse rounded-md bg-paper-2" aria-hidden="true" />;
@@ -37,7 +58,7 @@ export default function LifeVisionCard() {
       .then(() => setSaved(true))
       .catch((err) => {
         console.error("[life_vision] save failed", err);
-        fetchLifeVision(supabase).then(setText);
+        load();
       });
   };
 

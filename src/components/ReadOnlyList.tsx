@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { fetchItems } from "@/lib/db";
+import { classifyLoadError, type LoadFailure } from "@/lib/loadError";
 import { createClient } from "@/lib/supabase/client";
 import type { ItemCategory, TextItem } from "@/lib/types";
+import LoadError from "./LoadError";
 
 interface ReadOnlyListProps {
   category: ItemCategory;
@@ -18,16 +20,35 @@ interface ReadOnlyListProps {
 export default function ReadOnlyList({ category, editHref, editLabel }: ReadOnlyListProps) {
   const supabase = useMemo(() => createClient(), []);
   const [items, setItems] = useState<TextItem[] | null>(null);
+  const [error, setError] = useState<LoadFailure | null>(null);
+
+  const load = () => {
+    setError(null);
+    return fetchItems(supabase, category)
+      .then(setItems)
+      .catch((err) => {
+        console.error(`[${category}] load failed`, err);
+        setError(classifyLoadError(err));
+      });
+  };
 
   useEffect(() => {
     let active = true;
-    fetchItems(supabase, category).then((loaded) => {
-      if (active) setItems(loaded);
-    });
+    fetchItems(supabase, category)
+      .then((loaded) => {
+        if (active) setItems(loaded);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error(`[${category}] load failed`, err);
+        setError(classifyLoadError(err));
+      });
     return () => {
       active = false;
     };
   }, [supabase, category]);
+
+  if (error) return <LoadError kind={error} onRetry={load} />;
 
   if (!items) {
     return <div className="h-16 animate-pulse rounded-md bg-paper-2" aria-hidden="true" />;

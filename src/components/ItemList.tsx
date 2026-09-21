@@ -8,11 +8,13 @@ import {
   setItemNote,
   updateItemText,
 } from "@/lib/db";
+import { classifyLoadError, type LoadFailure } from "@/lib/loadError";
 import { createClient } from "@/lib/supabase/client";
 import type { ItemCategory, TextItem } from "@/lib/types";
 import { CATEGORY_PREFIXES } from "@/lib/types";
 import AddItemButton from "./AddItemButton";
 import ListItem from "./ListItem";
+import LoadError from "./LoadError";
 
 interface ItemListProps {
   category: ItemCategory;
@@ -32,15 +34,32 @@ export default function ItemList({
 }: ItemListProps) {
   const supabase = useMemo(() => createClient(), []);
   const [items, setItems] = useState<TextItem[] | null>(null);
+  const [error, setError] = useState<LoadFailure | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const reload = () => fetchItems(supabase, category, weekStart).then(setItems);
+  const reload = () => {
+    setError(null);
+    return fetchItems(supabase, category, weekStart)
+      .then(setItems)
+      .catch((err) => {
+        console.error(`[${category}] load failed`, err);
+        setError(classifyLoadError(err));
+      });
+  };
 
   useEffect(() => {
     let active = true;
-    fetchItems(supabase, category, weekStart).then((loaded) => {
-      if (active) setItems(loaded);
-    });
+    fetchItems(supabase, category, weekStart)
+      .then((loaded) => {
+        if (active) setItems(loaded);
+      })
+      .catch((err) => {
+        // A failed read must surface: otherwise the skeleton below pulses
+        // forever and looks exactly like an empty list.
+        if (!active) return;
+        console.error(`[${category}] load failed`, err);
+        setError(classifyLoadError(err));
+      });
     return () => {
       active = false;
     };
@@ -101,6 +120,8 @@ export default function ItemList({
     mutate((list) => list.filter((i) => i.id !== id));
     persist(dbDeleteItem(supabase, id));
   };
+
+  if (error) return <LoadError kind={error} onRetry={reload} />;
 
   if (!items) {
     return <div className="h-16 animate-pulse rounded-md bg-paper-2" aria-hidden="true" />;
