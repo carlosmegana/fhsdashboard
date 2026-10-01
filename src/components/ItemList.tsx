@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   deleteItem as dbDeleteItem,
   fetchItems,
+  fetchSpotlightId,
   insertItem,
   setItemNote,
+  setSpotlight,
   updateItemText,
 } from "@/lib/db";
 import { classifyLoadError, type LoadFailure } from "@/lib/loadError";
@@ -22,6 +24,8 @@ interface ItemListProps {
   // list and to stamp new items.
   weekStart?: string;
   emptyText?: string;
+  // Lets the person pick one item as their Issue en Foco (the Issues list).
+  spotlight?: boolean;
 }
 
 // One editable text list backed by a single `items` category. Same patterns as
@@ -31,17 +35,30 @@ export default function ItemList({
   category,
   weekStart,
   emptyText = "Sin elementos. Agrega uno nuevo.",
+  spotlight = false,
 }: ItemListProps) {
   const supabase = useMemo(() => createClient(), []);
   const [items, setItems] = useState<TextItem[] | null>(null);
   const [error, setError] = useState<LoadFailure | null>(null);
   const [saveError, setSaveError] = useState<LoadFailure | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [spotlightId, setSpotlightId] = useState<string | null>(null);
+
+  // Items, plus the spotlight id when this list offers one. Both must load:
+  // a missing spotlight column is a pending migration, reported like any other.
+  const load = () =>
+    Promise.all([
+      fetchItems(supabase, category, weekStart),
+      spotlight ? fetchSpotlightId(supabase) : Promise.resolve(null),
+    ]);
 
   const reload = () => {
     setError(null);
-    return fetchItems(supabase, category, weekStart)
-      .then(setItems)
+    return load()
+      .then(([loaded, sid]) => {
+        setItems(loaded);
+        setSpotlightId(sid);
+      })
       .catch((err) => {
         console.error(`[${category}] load failed`, err);
         setError(classifyLoadError(err));
@@ -50,9 +67,14 @@ export default function ItemList({
 
   useEffect(() => {
     let active = true;
-    fetchItems(supabase, category, weekStart)
-      .then((loaded) => {
-        if (active) setItems(loaded);
+    Promise.all([
+      fetchItems(supabase, category, weekStart),
+      spotlight ? fetchSpotlightId(supabase) : Promise.resolve(null),
+    ])
+      .then(([loaded, sid]) => {
+        if (!active) return;
+        setItems(loaded);
+        setSpotlightId(sid);
       })
       .catch((err) => {
         // A failed read must surface: otherwise the skeleton below pulses
@@ -64,7 +86,7 @@ export default function ItemList({
     return () => {
       active = false;
     };
-  }, [supabase, category, weekStart]);
+  }, [supabase, category, weekStart, spotlight]);
 
   const mutate = (fn: (list: TextItem[]) => TextItem[]) =>
     setItems((prev) => (prev ? fn(prev) : prev));
@@ -123,7 +145,16 @@ export default function ItemList({
 
   const deleteItem = (id: string) => {
     mutate((list) => list.filter((i) => i.id !== id));
+    // The database clears the spotlight itself (on delete set null).
+    if (spotlightId === id) setSpotlightId(null);
     persist(dbDeleteItem(supabase, id));
+  };
+
+  // Clicking the spotlighted issue again takes it out of focus.
+  const toggleSpotlight = (id: string) => {
+    const next = spotlightId === id ? null : id;
+    setSpotlightId(next);
+    persist(setSpotlight(supabase, next));
   };
 
   if (error) return <LoadError kind={error} onRetry={reload} />;
@@ -148,6 +179,15 @@ export default function ItemList({
               onCancel={() => cancelEdit(item.id)}
               onDelete={() => deleteItem(item.id)}
               onSaveNote={(text) => saveNote(item.id, text)}
+              spotlight={
+                // A brand-new, not-yet-saved item cannot be spotlighted.
+                spotlight && item.text !== ""
+                  ? {
+                      active: spotlightId === item.id,
+                      onToggle: () => toggleSpotlight(item.id),
+                    }
+                  : undefined
+              }
             />
           ))}
         </ul>

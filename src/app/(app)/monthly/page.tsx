@@ -5,8 +5,8 @@ import ReadOnlyList from "@/components/ReadOnlyList";
 import { ZonesScoreCard } from "@/components/ZonesCard";
 
 // Monthly: reads the quarter and year goals; writes this month's zone scores
-// and maintains the permanent Issues list. Creencias is the same shared list
-// shown on Weekly.
+// and maintains the permanent Issues list, where one issue can be spotlighted
+// for the Daily page. Creencias is the same shared list shown on Weekly.
 export default function MonthlyPage() {
   return (
     <>
@@ -31,9 +31,9 @@ export default function MonthlyPage() {
         <div className="flex flex-col gap-4">
           <DashboardCard
             title="Issues"
-            description="La lista permanente. Se revisa, no se reescribe."
+            description="La lista permanente. Marca con la diana el que pones en foco: es el que ves en Daily."
           >
-            <ItemList category="root_issues" emptyText="Sin issues todavia." />
+            <ItemList category="root_issues" spotlight emptyText="Sin issues todavia." />
           </DashboardCard>
           <DashboardCard
             title="Creencias"

@@ -40,7 +40,6 @@ const ITEM_COLUMNS =
 function emptyCategories(): Categories {
   return {
     keystone_habits: [],
-    issues: [],
     valores: [],
     metas: [],
     tasks: [],
@@ -385,6 +384,75 @@ export async function saveLifeVision(
   const { error } = await supabase
     .from("profiles")
     .update({ life_vision: text })
+    .eq("id", user.id);
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Issue en Foco (profiles.spotlight_issue_id)
+// ---------------------------------------------------------------------------
+
+// The id of the person's spotlighted issue, or null when none is chosen.
+export async function fetchSpotlightId(
+  supabase: SupabaseClient
+): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("spotlight_issue_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.spotlight_issue_id ?? null;
+}
+
+// The spotlighted issue itself (for the Daily page), plus when it was chosen.
+export async function fetchSpotlightIssue(
+  supabase: SupabaseClient
+): Promise<{ issue: TextItem | null; since: string | null }> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { issue: null, since: null };
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("spotlight_issue_id, spotlight_since")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) throw error;
+  const id = profile?.spotlight_issue_id as string | null | undefined;
+  if (!id) return { issue: null, since: null };
+
+  const { data: row, error: itemErr } = await supabase
+    .from("items")
+    .select("id, text, note")
+    .eq("id", id)
+    .maybeSingle();
+  if (itemErr) throw itemErr;
+  if (!row) return { issue: null, since: null };
+  const issue: TextItem = { id: row.id, text: row.text };
+  if (row.note) issue.note = row.note;
+  return { issue, since: profile?.spotlight_since ?? null };
+}
+
+// Sets (or, with null, clears) the spotlighted issue.
+export async function setSpotlight(
+  supabase: SupabaseClient,
+  issueId: string | null
+): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      spotlight_issue_id: issueId,
+      spotlight_since: issueId ? new Date().toISOString() : null,
+    })
     .eq("id", user.id);
   if (error) throw error;
 }

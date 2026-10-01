@@ -56,6 +56,16 @@
 >   retires the server-side UTC week-start issue). New `beliefs` category
 >   ("Creencias", migration 0006): ONE shared list rendered editable on both
 >   Weekly and Monthly until the owner picks its home.
+> - **Issue en Foco (0007).** Issues are ONE list: `root_issues`, edited on
+>   Monthly via `ItemList spotlight`, where a target button (`SpotlightButton`)
+>   marks one issue as the spotlight. It is stored as
+>   `profiles.spotlight_issue_id` (+ `spotlight_since`), FK to `items.id`
+>   `on delete set null`, so there is at most one and deleting it clears it.
+>   Daily's card is `SpotlightIssue` (read-only, links to Monthly). The old
+>   Daily-only `issues` list is gone from the app: 0007 moved its rows into
+>   `root_issues`, and `issues` was removed from `Categories`/`DAILY_CATEGORIES`
+>   (the DB check still allows it). This supersedes the "two lists named
+>   Issues" note above.
 > - **Failed saves are visible too.** `ItemList` shows `LoadError` with
 >   `action="save"` when a background write fails. `loadError.ts` treats
 >   `23514` (check violation) as missing_schema: in this app that means a

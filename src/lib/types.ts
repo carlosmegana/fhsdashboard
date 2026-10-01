@@ -33,7 +33,6 @@ export interface Habit {
 
 export interface Categories {
   keystone_habits: Habit[];
-  issues: TextItem[];
   valores: TextItem[];
   metas: TextItem[];
   tasks: ChecklistItem[];
@@ -49,7 +48,9 @@ export type CategoryKey = keyof Categories;
 
 // Every category stored in `items`, including the ones the other pages own:
 //   friction         weekly, scoped by week_start
-//   root_issues      monthly, permanent list
+//   root_issues      THE Issues list (Monthly). One of them can be the
+//                    spotlight, which is all the Daily page shows. The old
+//                    Daily-only `issues` category was folded in by 0007.
 //   quarter_goals    written quarterly, read monthly
 //   year_goals       written yearly, read monthly
 //   three_year_goals written yearly
@@ -65,7 +66,6 @@ export type ItemCategory =
 
 export const DAILY_CATEGORIES: CategoryKey[] = [
   "keystone_habits",
-  "issues",
   "valores",
   "metas",
   "tasks",
@@ -73,7 +73,6 @@ export const DAILY_CATEGORIES: CategoryKey[] = [
 
 export const CATEGORY_PREFIXES: Record<ItemCategory, string> = {
   keystone_habits: "kh",
-  issues: "is",
   valores: "vl",
   metas: "mt",
   tasks: "tk",

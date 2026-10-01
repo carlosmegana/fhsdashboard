@@ -28,6 +28,7 @@ Local development is optional; the app can be run entirely from Vercel.
    4. `0004_invites_v2.sql`
    5. `0005_horizons.sql`
    6. `0006_beliefs.sql`
+   7. `0007_spotlight.sql`
 
    Each one should finish with "Success. No rows returned". If Supabase shows a
    "Potential issue detected" dialog, click **Run query**: the files contain

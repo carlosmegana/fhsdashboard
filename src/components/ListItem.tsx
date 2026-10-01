@@ -5,6 +5,7 @@ import DeleteButton from "./DeleteButton";
 import EditableText from "./EditableText";
 import NoteButton from "./NoteButton";
 import NotePanel from "./NotePanel";
+import SpotlightButton from "./SpotlightButton";
 import { useItemNote } from "./useItemNote";
 
 interface ListItemProps {
@@ -15,6 +16,8 @@ interface ListItemProps {
   onCancel: () => void;
   onDelete: () => void;
   onSaveNote: (text: string) => void;
+  // Only on lists that support an Issue en Foco (the Issues list).
+  spotlight?: { active: boolean; onToggle: () => void };
 }
 
 export default function ListItem({
@@ -25,6 +28,7 @@ export default function ListItem({
   onCancel,
   onDelete,
   onSaveNote,
+  spotlight,
 }: ListItemProps) {
   const noteState = useItemNote(item.note, onSaveNote);
 
@@ -41,6 +45,14 @@ export default function ListItem({
             className="text-[15px] text-ink"
           />
         </div>
+        {spotlight?.active && (
+          <span className="shrink-0 rounded-full border border-ink px-2 py-0.5 text-[11px] font-medium text-ink">
+            En foco
+          </span>
+        )}
+        {spotlight && (
+          <SpotlightButton active={spotlight.active} onToggle={spotlight.onToggle} />
+        )}
         <NoteButton
           hasNote={noteState.hasNote}
           open={noteState.open}

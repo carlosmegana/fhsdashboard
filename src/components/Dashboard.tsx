@@ -21,6 +21,7 @@ import DashboardCard from "./DashboardCard";
 import type { HabitConfig } from "./HabitItem";
 import HabitItem from "./HabitItem";
 import ListItem from "./ListItem";
+import SpotlightIssue from "./SpotlightIssue";
 import TaskItem from "./TaskItem";
 
 type AnyItem = {
@@ -337,24 +338,11 @@ export default function Dashboard() {
           </DashboardCard>
 
           <DashboardCard
-            title="Issues"
-            description="Patrones y retos en los que estas trabajando."
+            title="Issue en Foco"
+            description="El issue en el que estas trabajando ahora."
             className="md:order-4"
           >
-            {data.categories.issues.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <ul className="divide-y divide-line">
-                {data.categories.issues.map((item) => (
-                  <ListItem
-                    key={item.id}
-                    item={item}
-                    {...itemHandlers("issues", item.id)}
-                  />
-                ))}
-              </ul>
-            )}
-            <AddItemButton onClick={() => addItem("issues")} />
+            <SpotlightIssue />
           </DashboardCard>
 
           <DashboardCard
