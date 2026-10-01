@@ -53,13 +53,15 @@ export type CategoryKey = keyof Categories;
 //   quarter_goals    written quarterly, read monthly
 //   year_goals       written yearly, read monthly
 //   three_year_goals written yearly
+//   beliefs          Creencias, shown on Weekly and Monthly (one shared list)
 export type ItemCategory =
   | CategoryKey
   | "friction"
   | "root_issues"
   | "quarter_goals"
   | "year_goals"
-  | "three_year_goals";
+  | "three_year_goals"
+  | "beliefs";
 
 export const DAILY_CATEGORIES: CategoryKey[] = [
   "keystone_habits",
@@ -80,6 +82,7 @@ export const CATEGORY_PREFIXES: Record<ItemCategory, string> = {
   quarter_goals: "qg",
   year_goals: "yg",
   three_year_goals: "tg",
+  beliefs: "bl",
 };
 
 // The 7 zones of the Flow Habit System, in order. New accounts start with

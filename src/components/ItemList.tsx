@@ -35,6 +35,7 @@ export default function ItemList({
   const supabase = useMemo(() => createClient(), []);
   const [items, setItems] = useState<TextItem[] | null>(null);
   const [error, setError] = useState<LoadFailure | null>(null);
+  const [saveError, setSaveError] = useState<LoadFailure | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const reload = () => {
@@ -68,14 +69,18 @@ export default function ItemList({
   const mutate = (fn: (list: TextItem[]) => TextItem[]) =>
     setItems((prev) => (prev ? fn(prev) : prev));
 
+  // Fires a background write. On failure, say so (the optimistic change is
+  // about to be rolled back by the resync, and the user must know why).
   const persist = (op: Promise<unknown>) => {
     op.catch((err) => {
       console.error(`[${category}] persist failed, resyncing`, err);
+      setSaveError(classifyLoadError(err));
       reload();
     });
   };
 
   const addItem = () => {
+    setSaveError(null);
     const id = `${CATEGORY_PREFIXES[category]}-${crypto.randomUUID()}`;
     mutate((list) => [...list, { id, text: "" }]);
     setEditingId(id);
@@ -146,6 +151,9 @@ export default function ItemList({
             />
           ))}
         </ul>
+      )}
+      {saveError && (
+        <LoadError kind={saveError} action="save" onDismiss={() => setSaveError(null)} />
       )}
       <AddItemButton onClick={addItem} />
     </>

@@ -3,13 +3,10 @@ import ItemList from "@/components/ItemList";
 import PageHeader from "@/components/PageHeader";
 import ReadOnlyList from "@/components/ReadOnlyList";
 import { ZonesReadCard } from "@/components/ZonesCard";
-import { periodStartStr } from "@/lib/date";
 
-// Weekly: reads this month's goals and the last zone scores; writes this
-// week's friction. The week is anchored to its Monday (local time).
+// Weekly: reads this month's goals and the last zone scores. Creencias is one
+// shared list, editable here and on Monthly until its final home is decided.
 export default function WeeklyPage() {
-  const weekStart = periodStartStr("weekly");
-
   return (
     <>
       <PageHeader title="Weekly" subtitle="Lo que revisas una vez por semana." />
@@ -23,14 +20,10 @@ export default function WeeklyPage() {
         </DashboardCard>
 
         <DashboardCard
-          title="Friccion"
-          description="Que se interpuso esta semana. Superficial, desechable, materia prima."
+          title="Creencias"
+          description="Las ideas que guian como actuas. Identifica y refuerza las que te sirven."
         >
-          <ItemList
-            category="friction"
-            weekStart={weekStart}
-            emptyText="Sin friccion esta semana. Agrega lo que se interpuso."
-          />
+          <ItemList category="beliefs" emptyText="Sin creencias todavia." />
         </DashboardCard>
       </div>
     </>

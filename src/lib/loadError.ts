@@ -5,7 +5,15 @@
 // PGRST205 / PGRST202  table or function not in PostgREST's schema cache
 // 42P01                undefined_table
 // 42703                undefined_column
-const MISSING_SCHEMA_CODES = new Set(["PGRST205", "PGRST202", "42P01", "42703"]);
+// 23514                check_violation: in this app, a write to a category the
+//                      database does not know yet (migration not applied)
+const MISSING_SCHEMA_CODES = new Set([
+  "PGRST205",
+  "PGRST202",
+  "42P01",
+  "42703",
+  "23514",
+]);
 
 export type LoadFailure = "missing_schema" | "unknown";
 

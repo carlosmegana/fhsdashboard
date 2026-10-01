@@ -47,11 +47,25 @@
 >   del Trimestre (write). Daily card titles: "Keystone Habits" and "Metas
 >   del Mes" per the doc. Still open (owner's call): Energia, Issue en Foco,
 >   week-scoped Tareas, Creencias, zone trend on the yearly page.
+> - **Oct 2026 edits from the owner.** Daily card "Problemas" is now titled
+>   "Issues" (category still `issues`). Monthly "Issues Raiz" is now "Issues"
+>   (category still `root_issues`) — NOTE these are two different lists with
+>   the same title; merging them is an open question for the owner. Weekly no
+>   longer has Friccion (owner does not want it; `friction` stays allowed in
+>   the DB so old rows are valid, and nothing writes it now — which also
+>   retires the server-side UTC week-start issue). New `beliefs` category
+>   ("Creencias", migration 0006): ONE shared list rendered editable on both
+>   Weekly and Monthly until the owner picks its home.
+> - **Failed saves are visible too.** `ItemList` shows `LoadError` with
+>   `action="save"` when a background write fails. `loadError.ts` treats
+>   `23514` (check violation) as missing_schema: in this app that means a
+>   category the database does not know yet, i.e. a migration not applied.
+>   `LoadError` no longer names a specific migration file.
 > - **Every page-level read must surface its failure.** `ItemList`,
 >   `ReadOnlyList`, `ZonesCard` and `LifeVisionCard` catch the initial fetch
 >   and render `LoadError` instead of leaving a skeleton pulsing forever.
 >   `src/lib/loadError.ts` classifies PostgREST `PGRST205/PGRST202/42P01/42703`
->   as `missing_schema`, which renders "aplica la migracion 0005" — an
+>   as `missing_schema`, which renders "aplica las migraciones pendientes" — an
 >   un-migrated database used to look identical to an empty page. Keep this
 >   pattern on any new data component.
 > - **Migrations are applied by hand in the Supabase SQL editor**, so every

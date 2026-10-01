@@ -337,7 +337,7 @@ export default function Dashboard() {
           </DashboardCard>
 
           <DashboardCard
-            title="Problemas"
+            title="Issues"
             description="Patrones y retos en los que estas trabajando."
             className="md:order-4"
           >

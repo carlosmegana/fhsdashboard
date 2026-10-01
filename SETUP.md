@@ -27,6 +27,7 @@ Local development is optional; the app can be run entirely from Vercel.
    3. `0003_habit_targets.sql`
    4. `0004_invites_v2.sql`
    5. `0005_horizons.sql`
+   6. `0006_beliefs.sql`
 
    Each one should finish with "Success. No rows returned". If Supabase shows a
    "Potential issue detected" dialog, click **Run query**: the files contain
@@ -34,7 +35,7 @@ Local development is optional; the app can be run entirely from Vercel.
 
    (Files 0002 and 0004 create invite tables from an earlier design. The app no
    longer uses them, but they are harmless and 0004 also adds the owner flag
-   described below, so run all five.)
+   described below, so run them all.)
 
 3. **Signup settings.** Under **Authentication**:
    - **Allow new users to sign up**: **ON**. Anyone with the app's URL can

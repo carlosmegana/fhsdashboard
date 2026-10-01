@@ -5,7 +5,8 @@ import ReadOnlyList from "@/components/ReadOnlyList";
 import { ZonesScoreCard } from "@/components/ZonesCard";
 
 // Monthly: reads the quarter and year goals; writes this month's zone scores
-// and maintains the permanent root-issues list.
+// and maintains the permanent Issues list. Creencias is the same shared list
+// shown on Weekly.
 export default function MonthlyPage() {
   return (
     <>
@@ -27,12 +28,20 @@ export default function MonthlyPage() {
           <ZonesScoreCard />
         </DashboardCard>
 
-        <DashboardCard
-          title="Issues Raiz"
-          description="La lista permanente. Se revisa, no se reescribe."
-        >
-          <ItemList category="root_issues" emptyText="Sin issues raiz todavia." />
-        </DashboardCard>
+        <div className="flex flex-col gap-4">
+          <DashboardCard
+            title="Issues"
+            description="La lista permanente. Se revisa, no se reescribe."
+          >
+            <ItemList category="root_issues" emptyText="Sin issues todavia." />
+          </DashboardCard>
+          <DashboardCard
+            title="Creencias"
+            description="Las ideas que guian como actuas. Identifica y refuerza las que te sirven."
+          >
+            <ItemList category="beliefs" emptyText="Sin creencias todavia." />
+          </DashboardCard>
+        </div>
       </div>
     </>
   );
