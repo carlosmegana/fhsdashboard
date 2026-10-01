@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  deleteItem as dbDeleteItem,
   fetchItems,
   fetchSpotlightId,
+  historyEnabled,
   insertItem,
+  removeItem,
+  setGoalStatus,
   setItemNote,
   setSpotlight,
   updateItemText,
@@ -13,7 +15,7 @@ import {
 import { classifyLoadError, type LoadFailure } from "@/lib/loadError";
 import { createClient } from "@/lib/supabase/client";
 import type { ItemCategory, TextItem } from "@/lib/types";
-import { CATEGORY_PREFIXES } from "@/lib/types";
+import { CATEGORY_PREFIXES, GOAL_CATEGORIES } from "@/lib/types";
 import AddItemButton from "./AddItemButton";
 import ListItem from "./ListItem";
 import LoadError from "./LoadError";
@@ -43,6 +45,8 @@ export default function ItemList({
   const [saveError, setSaveError] = useState<LoadFailure | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [spotlightId, setSpotlightId] = useState<string | null>(null);
+  // Goal lists offer "lograda" once the history update (0008) is applied.
+  const [goals, setGoals] = useState(false);
 
   // Items, plus the spotlight id when this list offers one. Both must load:
   // a missing spotlight column is a pending migration, reported like any other.
@@ -50,14 +54,16 @@ export default function ItemList({
     Promise.all([
       fetchItems(supabase, category, weekStart),
       spotlight ? fetchSpotlightId(supabase) : Promise.resolve(null),
+      historyEnabled(supabase),
     ]);
 
   const reload = () => {
     setError(null);
     return load()
-      .then(([loaded, sid]) => {
+      .then(([loaded, sid, history]) => {
         setItems(loaded);
         setSpotlightId(sid);
+        setGoals(history && GOAL_CATEGORIES.has(category));
       })
       .catch((err) => {
         console.error(`[${category}] load failed`, err);
@@ -70,11 +76,13 @@ export default function ItemList({
     Promise.all([
       fetchItems(supabase, category, weekStart),
       spotlight ? fetchSpotlightId(supabase) : Promise.resolve(null),
+      historyEnabled(supabase),
     ])
-      .then(([loaded, sid]) => {
+      .then(([loaded, sid, history]) => {
         if (!active) return;
         setItems(loaded);
         setSpotlightId(sid);
+        setGoals(history && GOAL_CATEGORIES.has(category));
       })
       .catch((err) => {
         // A failed read must surface: otherwise the skeleton below pulses
@@ -144,10 +152,20 @@ export default function ItemList({
   };
 
   const deleteItem = (id: string) => {
+    const status = items?.find((i) => i.id === id)?.status;
     mutate((list) => list.filter((i) => i.id !== id));
     // The database clears the spotlight itself (on delete set null).
     if (spotlightId === id) setSpotlightId(null);
-    persist(dbDeleteItem(supabase, id));
+    // Goals are hidden, not erased (an open one counts as dropped).
+    persist(removeItem(supabase, category, id, status));
+  };
+
+  const toggleGoal = (id: string) => {
+    const current = items?.find((i) => i.id === id);
+    if (!current) return;
+    const next = current.status === "done" ? "open" : "done";
+    mutate((list) => list.map((i) => (i.id === id ? { ...i, status: next } : i)));
+    persist(setGoalStatus(supabase, id, next));
   };
 
   // Clicking the spotlighted issue again takes it out of focus.
@@ -179,6 +197,11 @@ export default function ItemList({
               onCancel={() => cancelEdit(item.id)}
               onDelete={() => deleteItem(item.id)}
               onSaveNote={(text) => saveNote(item.id, text)}
+              goal={
+                goals && item.text !== ""
+                  ? { done: item.status === "done", onToggle: () => toggleGoal(item.id) }
+                  : undefined
+              }
               spotlight={
                 // A brand-new, not-yet-saved item cannot be spotlighted.
                 spotlight && item.text !== ""

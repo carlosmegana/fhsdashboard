@@ -1,26 +1,36 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatDisplayDate } from "@/lib/date";
+import { formatDisplayDate, todayStr } from "@/lib/date";
 import {
-  deleteItem as dbDeleteItem,
   fetchDashboard,
+  fetchHabitLogs,
+  fetchHistorySince,
+  historyEnabled,
   insertItem,
+  logHabit,
+  removeItem,
   runDailyResetIfNeeded,
+  setGoalStatus,
   setHabitConfig,
   setItemCompleted,
   setItemNote,
   setItemProgress,
+  setTaskCompleted,
   updateItemText,
 } from "@/lib/db";
+import { addDays, streak, type HabitLog } from "@/lib/history";
+import { classifyLoadError, type LoadFailure } from "@/lib/loadError";
 import { createClient } from "@/lib/supabase/client";
-import type { CategoryKey, HabitPeriod, PgcData } from "@/lib/types";
+import type { CategoryKey, GoalStatus, HabitPeriod, PgcData } from "@/lib/types";
 import { CATEGORY_PREFIXES } from "@/lib/types";
 import AddItemButton from "./AddItemButton";
 import DashboardCard from "./DashboardCard";
 import type { HabitConfig } from "./HabitItem";
 import HabitItem from "./HabitItem";
+import HabitHistoryPanel from "./history/HabitHistoryPanel";
 import ListItem from "./ListItem";
+import LoadError from "./LoadError";
 import SpotlightIssue from "./SpotlightIssue";
 import TaskItem from "./TaskItem";
 
@@ -35,7 +45,11 @@ type AnyItem = {
   step?: number;
   progress?: number;
   period?: HabitPeriod;
+  status?: GoalStatus; // Metas del Mes
 };
+
+// How far back the Daily page reads habit history to compute streaks.
+const STREAK_LOOKBACK_DAYS = 120;
 
 function updateCategory(
   data: PgcData,
@@ -62,19 +76,67 @@ function EmptyState() {
 export default function Dashboard() {
   const supabase = useMemo(() => createClient(), []);
   const [data, setData] = useState<PgcData | null>(null);
+  const [loadError, setLoadError] = useState<LoadFailure | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Timelines. `history` turns on once migration 0008 is applied; until then
+  // the page behaves exactly as before. `logs` holds recent habit history for
+  // the streaks, updated optimistically as habits are ticked.
+  const [history, setHistory] = useState(false);
+  const [historySince, setHistorySince] = useState<string | null>(null);
+  const [logs, setLogs] = useState<HabitLog[]>([]);
+  const [historyError, setHistoryError] = useState<LoadFailure | null>(null);
+  const [historyHabitId, setHistoryHabitId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    fetchDashboard(supabase).then((loaded) => {
-      // Data is only available after the async fetch, so the first real render
-      // happens post-mount. This mirrors the previous hydration-safe pattern.
-      if (active) setData(loaded);
-    });
+    fetchDashboard(supabase)
+      .then((loaded) => {
+        // Data is only available after the async fetch, so the first real render
+        // happens post-mount. This mirrors the previous hydration-safe pattern.
+        if (active) setData(loaded);
+      })
+      .catch((err) => {
+        // Never leave the skeleton pulsing: say what went wrong.
+        if (!active) return;
+        console.error("[dashboard] load failed", err);
+        setLoadError(classifyLoadError(err));
+      });
     return () => {
       active = false;
     };
   }, [supabase]);
+
+  useEffect(() => {
+    let active = true;
+    historyEnabled(supabase)
+      .then(async (enabled) => {
+        if (!enabled) return;
+        const [since, recent] = await Promise.all([
+          fetchHistorySince(supabase),
+          fetchHabitLogs(supabase, addDays(todayStr(), -STREAK_LOOKBACK_DAYS)),
+        ]);
+        if (!active) return;
+        setHistorySince(since);
+        setLogs(recent);
+        setHistory(true);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error("[dashboard] history load failed", err);
+        setHistoryError(classifyLoadError(err));
+      });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  const retryLoad = () => {
+    setLoadError(null);
+    fetchDashboard(supabase)
+      .then(setData)
+      .catch((err) => setLoadError(classifyLoadError(err)));
+  };
 
   // Cover the "tab left open past midnight" case: on refocus, re-check the daily
   // reset and reload if habits were reset server-side.
@@ -106,13 +168,61 @@ export default function Dashboard() {
     });
   };
 
+  // Writes today's entry in the habit's history (the window's progress as of
+  // today, with the target in force). A failure here never touches the habit
+  // itself, but it is shown so a gap in the history is not silent.
+  const recordHabit = (
+    habitId: string,
+    target: number | undefined,
+    progress: number,
+    completed: boolean
+  ) => {
+    if (!history) return;
+    const entry: HabitLog = {
+      habit_id: habitId,
+      day: todayStr(),
+      progress,
+      target: target ?? null,
+      completed,
+    };
+    setLogs((prev) => [
+      ...prev.filter((l) => !(l.habit_id === habitId && l.day === entry.day)),
+      entry,
+    ]);
+    logHabit(supabase, entry).catch((err) => {
+      console.error("[dashboard] habit history write failed", err);
+      setHistoryError(classifyLoadError(err));
+    });
+  };
+
   const setCompleted = (key: CategoryKey, id: string, completed: boolean) => {
     mutate((d) =>
       updateCategory(d, key, (list) =>
         list.map((i) => (i.id === id ? { ...i, completed } : i))
       )
     );
+    if (key === "tasks") {
+      persist(setTaskCompleted(supabase, id, completed));
+      return;
+    }
     persist(setItemCompleted(supabase, id, completed));
+    if (key === "keystone_habits") {
+      const habit = data?.categories.keystone_habits.find((h) => h.id === id);
+      recordHabit(id, habit?.target, habit?.progress ?? 0, completed);
+    }
+  };
+
+  // Metas del Mes: achieved, or back to open.
+  const toggleGoal = (id: string) => {
+    const goal = data?.categories.metas.find((g) => g.id === id);
+    if (!goal) return;
+    const next = goal.status === "done" ? "open" : "done";
+    mutate((d) =>
+      updateCategory(d, "metas", (list) =>
+        list.map((i) => (i.id === id ? { ...i, status: next } : i))
+      )
+    );
+    persist(setGoalStatus(supabase, id, next));
   };
 
   // Measurable-habit progress. Clamps at 0 (no upper cap — overshooting a target
@@ -129,6 +239,7 @@ export default function Dashboard() {
       )
     );
     persist(setItemProgress(supabase, id, next));
+    recordHabit(id, habit.target, next, next > 0);
   };
 
   // Applies target/unit/step/cadence config. target=null reverts to a checkbox.
@@ -223,12 +334,33 @@ export default function Dashboard() {
     persist(setItemNote(supabase, id, text === "" ? null : text));
   };
 
+  // Habits, tasks and goals are hidden rather than erased once history is
+  // recorded, so their past stays in the timelines.
   const deleteItem = (key: CategoryKey, id: string) => {
+    const current = data?.categories[key].find((i) => i.id === id) as
+      | AnyItem
+      | undefined;
     mutate((d) =>
       updateCategory(d, key, (list) => list.filter((i) => i.id !== id))
     );
-    persist(dbDeleteItem(supabase, id));
+    if (historyHabitId === id) setHistoryHabitId(null);
+    persist(removeItem(supabase, key, id, current?.status));
   };
+
+  const today = todayStr();
+  const streakFor = (habit: PgcData["categories"]["keystone_habits"][number]) => {
+    if (!history || !historySince) return 0;
+    const since =
+      habit.createdOn && habit.createdOn > historySince ? habit.createdOn : historySince;
+    return streak(
+      logs.filter((l) => l.habit_id === habit.id),
+      habit.period,
+      today,
+      since
+    );
+  };
+  const historyHabit =
+    data?.categories.keystone_habits.find((h) => h.id === historyHabitId) ?? null;
 
   const itemHandlers = (key: CategoryKey, id: string) => ({
     isEditing: editingId === id,
@@ -253,7 +385,11 @@ export default function Dashboard() {
         )}
       </div>
 
-      {!data ? (
+      {loadError ? (
+        <div className="rounded-lg border border-line">
+          <LoadError kind={loadError} onRetry={retryLoad} />
+        </div>
+      ) : !data ? (
         <div
           className="grid grid-cols-1 gap-4 md:grid-cols-3"
           aria-hidden="true"
@@ -272,6 +408,14 @@ export default function Dashboard() {
             description="Rutinas que sostienen todo lo demas. Cada una se reinicia segun su ritmo: diario, semanal o mensual."
             className="md:order-1"
           >
+            {historyError && (
+              <p role="alert" className="mb-2 rounded-md bg-paper-2 px-3 py-2 text-xs text-ink-2">
+                El historial de habitos no se esta guardando.{" "}
+                {historyError === "missing_schema"
+                  ? "Falta una actualizacion de la base de datos."
+                  : "Revisa tu conexion y recarga."}
+              </p>
+            )}
             {data.categories.keystone_habits.length === 0 ? (
               <EmptyState />
             ) : (
@@ -286,6 +430,12 @@ export default function Dashboard() {
                     onAdjust={(delta) => adjustProgress(item.id, delta)}
                     onSaveConfig={(config) =>
                       saveHabitConfig(item.id, config)
+                    }
+                    streak={streakFor(item)}
+                    onOpenHistory={
+                      history && item.text !== ""
+                        ? () => setHistoryHabitId(item.id)
+                        : undefined
                     }
                     {...itemHandlers("keystone_habits", item.id)}
                   />
@@ -329,6 +479,11 @@ export default function Dashboard() {
                   <ListItem
                     key={item.id}
                     item={item}
+                    goal={
+                      history && item.text !== ""
+                        ? { done: item.status === "done", onToggle: () => toggleGoal(item.id) }
+                        : undefined
+                    }
                     {...itemHandlers("metas", item.id)}
                   />
                 ))}
@@ -371,6 +526,11 @@ export default function Dashboard() {
           </DashboardCard>
         </div>
       )}
+      <HabitHistoryPanel
+        habit={historyHabit}
+        onClose={() => setHistoryHabitId(null)}
+        localLogs={logs}
+      />
     </>
   );
 }

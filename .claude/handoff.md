@@ -66,6 +66,39 @@
 >   `root_issues`, and `issues` was removed from `Categories`/`DAILY_CATEGORIES`
 >   (the DB check still allows it). This supersedes the "two lists named
 >   Issues" note above.
+> - **Timelines (0008).** Owner-approved design: details on demand, no new
+>   page. (1) Each habit on Daily has a streak button (`HabitStreakButton`)
+>   that opens `HabitHistoryPanel` (calendar for daily habits, one cell per
+>   week/month otherwise). (2) "Revisar el mes" on Monthly (`MonthlyReview`:
+>   habit strips + tasks per week) and "Revisar el trimestre" on Yearly
+>   (`QuarterlyReview`: zone trends + goals by quarter). (3) Tapping a zone
+>   (Weekly) or its trend icon (Monthly) opens `ZoneHistoryPanel`. All panels
+>   are `SidePanel` (native modal `<dialog>`), mounting content only while open.
+>   - **Recording:** `habit_logs` (PK user_id, habit_id, day) holds the
+>     window's running progress as of that local day plus the target then;
+>     Dashboard `recordHabit` upserts on every tick/stepper change. Resets are
+>     unchanged (items.progress is still the live value; the log mirrors it).
+>     A window's value = its latest log. `profiles.history_since` separates
+>     "no data" from "not done". Tasks: `completed_at`. Goals: `status`
+>     (open/done/dropped) + `status_at`; `GoalCheckButton` marks done; removing
+>     an open goal records it as dropped. `removeItem` archives
+>     (`archived_at`) habits, tasks and goals instead of deleting.
+>   - **Works before 0008 is applied.** `db.ts#historyEnabled` probes
+>     `habit_logs` once per page load; without it every query and write falls
+>     back to pre-0008 behavior and the review panels say an update is needed.
+>     Keep this switch on any new history-dependent code.
+>   - **All date math is in `src/lib/history.ts`** (pure, no runtime imports)
+>     on local YYYY-MM-DD strings. It has a plain-Node test (14 checks: year
+>     ends, Sunday "today", untick within a week, data-before-recording, rate
+>     not counting an unfinished today, goals by quarter); run it with
+>     `npm run test:history` after any change there.
+>   - `selectAll` pages every growing history read (PostgREST silently caps
+>     responses at 1000 rows). Daily reads 120 days of logs for streaks, so a
+>     streak can display at most ~120 days / ~17 weeks / ~4 months.
+>   - Verified: migrations 0001-0008 run clean twice on Postgres 16; as an
+>     RLS-bound user, same-day upsert updates (no duplicate), another user's
+>     rows are invisible and unwritable, an archived habit keeps its logs.
+>     Browser end-to-end against a mock, both before and after 0008.
 > - **Failed saves are visible too.** `ItemList` shows `LoadError` with
 >   `action="save"` when a background write fails. `loadError.ts` treats
 >   `23514` (check violation) as missing_schema: in this app that means a

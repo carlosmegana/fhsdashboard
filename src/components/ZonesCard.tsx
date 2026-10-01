@@ -7,7 +7,16 @@ import { fetchZoneScores, fetchZones, renameZone, setZoneScore } from "@/lib/db"
 import { classifyLoadError, type LoadFailure } from "@/lib/loadError";
 import { createClient } from "@/lib/supabase/client";
 import { defaultZoneName, type Zone, type ZoneScore } from "@/lib/types";
+import ZoneHistoryPanel from "./history/ZoneHistoryPanel";
 import LoadError from "./LoadError";
+
+function TrendIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 17l5-5 4 4 8-8M15 8h5v5" />
+    </svg>
+  );
+}
 
 const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -71,6 +80,7 @@ function useZones() {
 // Monthly page: name the 7 zones (once) and score each 1-10 for this month.
 export function ZonesScoreCard() {
   const { supabase, state, setState, error, reload, persist } = useZones();
+  const [historyZone, setHistoryZone] = useState<Zone | null>(null);
   const month = periodStartStr("monthly");
 
   if (error) return <LoadError kind={error} onRetry={reload} />;
@@ -109,6 +119,7 @@ export function ZonesScoreCard() {
           const current = scoreFor(zone.id);
           return (
             <li key={zone.id} className="py-2">
+              <div className="flex items-center gap-1">
               <input
                 type="text"
                 defaultValue={zone.name}
@@ -120,8 +131,18 @@ export function ZonesScoreCard() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") e.currentTarget.blur();
                 }}
-                className="w-full rounded-md border border-transparent px-1 py-0.5 text-[15px] text-ink outline-none placeholder:text-ink-3 hover:border-line focus:border-ink"
+                className="min-w-0 flex-1 rounded-md border border-transparent px-1 py-0.5 text-[15px] text-ink outline-none placeholder:text-ink-3 hover:border-line focus:border-ink"
               />
+              <button
+                type="button"
+                onClick={() => setHistoryZone({ ...zone, name: zoneLabel(zone) })}
+                aria-label={`Historial de ${zoneLabel(zone)}`}
+                title="Ver historial"
+                className="shrink-0 rounded-md p-1 text-ink-3 transition-colors hover:bg-paper-2 hover:text-ink"
+              >
+                <TrendIcon />
+              </button>
+              </div>
               <div
                 role="radiogroup"
                 aria-label={`Puntaje de ${zoneLabel(zone)}`}
@@ -151,6 +172,7 @@ export function ZonesScoreCard() {
           );
         })}
       </ul>
+      <ZoneHistoryPanel zone={historyZone} scores={state.scores} onClose={() => setHistoryZone(null)} />
     </div>
   );
 }
@@ -158,6 +180,7 @@ export function ZonesScoreCard() {
 // Weekly page: the most recent month that has any score, read-only.
 export function ZonesReadCard() {
   const { state, error, reload } = useZones();
+  const [historyZone, setHistoryZone] = useState<Zone | null>(null);
 
   if (error) return <LoadError kind={error} onRetry={reload} />;
 
@@ -187,7 +210,13 @@ export function ZonesReadCard() {
             (s) => s.zone_id === zone.id && s.month === latestMonth
           )?.score;
           return (
-            <li key={zone.id} className="flex items-center gap-3 py-2">
+            <li key={zone.id}>
+              <button
+                type="button"
+                onClick={() => setHistoryZone({ ...zone, name: zoneLabel(zone) })}
+                aria-label={`${zoneLabel(zone)}: ${score ?? "sin puntaje"}. Ver historial`}
+                className="-mx-1 flex w-[calc(100%+0.5rem)] items-center gap-3 rounded-md px-1 py-2 text-left transition-colors hover:bg-paper-2"
+              >
               <span className="min-w-0 flex-1 truncate text-[15px] text-ink">
                 {zoneLabel(zone)}
               </span>
@@ -202,10 +231,13 @@ export function ZonesReadCard() {
               <span className="w-6 shrink-0 text-right text-sm tabular-nums text-ink-2">
                 {score ?? "—"}
               </span>
+              </button>
             </li>
           );
         })}
       </ul>
+      <p className="mt-2 text-[11px] text-ink-3">Toca una zona para ver su historial.</p>
+      <ZoneHistoryPanel zone={historyZone} scores={state.scores} onClose={() => setHistoryZone(null)} />
     </div>
   );
 }

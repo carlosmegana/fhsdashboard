@@ -70,7 +70,15 @@ export default function ReadOnlyList({ category, editHref, editLabel }: ReadOnly
     <ul className="divide-y divide-line">
       {items.map((item) => (
         <li key={item.id} className="py-1.5">
-          <p className="text-[15px] text-ink">{item.text}</p>
+          <p className={`flex items-start gap-2 text-[15px] ${item.status === "done" ? "text-ink-3" : "text-ink"}`}>
+            {item.status === "done" && (
+              <svg viewBox="0 0 16 16" className="mt-1 h-3.5 w-3.5 shrink-0" role="img" aria-label="Lograda">
+                <circle cx="8" cy="8" r="8" fill="var(--color-ink)" />
+                <path d="M4.6 8.2l2.2 2.2 4.6-4.8" fill="none" stroke="var(--color-paper)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+            <span>{item.text}</span>
+          </p>
           {item.note && (
             <p className="mt-0.5 whitespace-pre-wrap text-xs text-ink-3">{item.note}</p>
           )}

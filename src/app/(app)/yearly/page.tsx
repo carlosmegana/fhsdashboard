@@ -1,5 +1,6 @@
 import DashboardCard from "@/components/DashboardCard";
 import ItemList from "@/components/ItemList";
+import QuarterlyReview from "@/components/history/QuarterlyReview";
 import LifeVisionCard from "@/components/LifeVisionCard";
 import PageHeader from "@/components/PageHeader";
 
@@ -11,6 +12,7 @@ export default function YearlyPage() {
       <PageHeader
         title="Quarterly & Yearly"
         subtitle="Lo que revisas cada trimestre y cada ano."
+        aside={<QuarterlyReview />}
       />
       <div className="flex flex-col gap-4">
         <DashboardCard title="Vision de Vida" description="Se escribe una vez al ano.">

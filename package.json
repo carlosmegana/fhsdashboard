@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:history": "node --experimental-strip-types --no-warnings scripts/history.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

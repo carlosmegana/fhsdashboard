@@ -5,10 +5,14 @@ export interface ChecklistItem {
   note?: string;
 }
 
+// Goals only: open, achieved (lograda) or dropped (descartada).
+export type GoalStatus = "open" | "done" | "dropped";
+
 export interface TextItem {
   id: string;
   text: string;
   note?: string;
+  status?: GoalStatus; // goal categories, once history is recorded
 }
 
 // Reset cadence for a keystone habit. The habit's progress carries within the
@@ -29,6 +33,7 @@ export interface Habit {
   step: number; // +/- increment, >= 1
   progress: number; // logged amount in the current window
   period: HabitPeriod;
+  createdOn?: string; // YYYY-MM-DD, local; timelines show no data before it
 }
 
 export interface Categories {
@@ -70,6 +75,23 @@ export const DAILY_CATEGORIES: CategoryKey[] = [
   "metas",
   "tasks",
 ];
+
+// Goal lists: each item can be marked achieved, and removing an open one
+// records it as dropped.
+export const GOAL_CATEGORIES: ReadonlySet<ItemCategory> = new Set<ItemCategory>([
+  "metas",
+  "quarter_goals",
+  "year_goals",
+  "three_year_goals",
+]);
+
+// Categories whose past matters to the timelines. Removing one of these hides
+// it (archived_at) instead of erasing it, once history is recorded.
+export const HISTORY_CATEGORIES: ReadonlySet<ItemCategory> = new Set<ItemCategory>([
+  "keystone_habits",
+  "tasks",
+  ...GOAL_CATEGORIES,
+]);
 
 export const CATEGORY_PREFIXES: Record<ItemCategory, string> = {
   keystone_habits: "kh",

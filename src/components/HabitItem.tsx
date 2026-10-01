@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { Habit, HabitPeriod } from "@/lib/types";
 import DeleteButton from "./DeleteButton";
 import EditableText from "./EditableText";
+import HabitStreakButton from "./history/HabitStreakButton";
 import NoteButton from "./NoteButton";
 import NotePanel from "./NotePanel";
 import { useItemNote } from "./useItemNote";
@@ -27,6 +28,10 @@ interface HabitItemProps {
   onDelete: () => void;
   onSaveNote: (text: string) => void;
   onSaveConfig: (config: HabitConfig) => void;
+  // Timelines (once history is recorded): current streak, and opening the
+  // habit's history panel.
+  streak?: number;
+  onOpenHistory?: () => void;
 }
 
 const PERIOD_LABEL: Record<HabitPeriod, string> = {
@@ -46,6 +51,8 @@ export default function HabitItem({
   onDelete,
   onSaveNote,
   onSaveConfig,
+  streak,
+  onOpenHistory,
 }: HabitItemProps) {
   const noteState = useItemNote(item.note, onSaveNote);
   const [configOpen, setConfigOpen] = useState(false);
@@ -100,13 +107,19 @@ export default function HabitItem({
             onStartEdit={onStartEdit}
             onSave={onSave}
             onCancel={onCancel}
-            className="text-[15px] text-ink"
+            className="break-words text-[15px] text-ink"
           />
+          {item.period !== "daily" && !isEditing && (
+            <span className="block text-[11px] text-ink-3">{PERIOD_LABEL[item.period]}</span>
+          )}
         </div>
-        {item.period !== "daily" && (
-          <span className="shrink-0 rounded-full border border-line px-2 py-0.5 text-[11px] font-medium text-ink-3">
-            {PERIOD_LABEL[item.period]}
-          </span>
+        {onOpenHistory && (
+          <HabitStreakButton
+            count={streak ?? 0}
+            period={item.period}
+            habitName={item.text}
+            onClick={onOpenHistory}
+          />
         )}
         <ConfigButton
           active={measurable}

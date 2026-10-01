@@ -1,8 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { periodStartStr, todayStr } from "./date";
+import type { GoalRow, HabitLog } from "./history";
+import { dayStr } from "./history";
+import { classifyLoadError } from "./loadError";
 import type {
   Categories,
   CategoryKey,
+  GoalStatus,
   Habit,
   HabitPeriod,
   ItemCategory,
@@ -11,7 +15,12 @@ import type {
   Zone,
   ZoneScore,
 } from "./types";
-import { DAILY_CATEGORIES, defaultZoneName } from "./types";
+import {
+  DAILY_CATEGORIES,
+  GOAL_CATEGORIES,
+  HISTORY_CATEGORIES,
+  defaultZoneName,
+} from "./types";
 
 // Data access layer backing the dashboard with Supabase Postgres (replaces the
 // old localStorage `storage.ts`). Every function takes the browser client and
@@ -32,10 +41,54 @@ interface ItemRow {
   progress: number;
   period: HabitPeriod;
   period_start: string; // YYYY-MM-DD
+  status?: GoalStatus; // present once migration 0008 is applied
 }
 
 const ITEM_COLUMNS =
   "id, category, text, completed, note, created_at, target, unit, step, progress, period, period_start";
+const ITEM_COLUMNS_WITH_HISTORY = `${ITEM_COLUMNS}, status`;
+
+// ---------------------------------------------------------------------------
+// History switch
+// ---------------------------------------------------------------------------
+// Migrations are applied by hand, and Vercel deploys code the moment it is
+// pushed, so the app must keep working on a database that has not received
+// 0008 yet. This asks the database once per page load whether the history
+// table exists. Without it, everything behaves as before 0008 (no archiving,
+// no habit log, no goal status) and the timeline views say what is missing.
+let historyProbe: Promise<boolean> | null = null;
+
+export function historyEnabled(supabase: SupabaseClient): Promise<boolean> {
+  if (!historyProbe) {
+    historyProbe = (async () => {
+      const { error } = await supabase.from("habit_logs").select("day").limit(1);
+      if (!error) return true;
+      if (classifyLoadError(error) === "missing_schema") return false;
+      throw error;
+    })();
+    // A network blip must not pin the answer for the whole session.
+    historyProbe.catch(() => {
+      historyProbe = null;
+    });
+  }
+  return historyProbe;
+}
+
+// PostgREST caps a response at 1000 rows (Supabase default), silently. Every
+// history read that can grow goes through this, one page at a time.
+async function selectAll<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>
+): Promise<T[]> {
+  const SIZE = 1000;
+  const out: T[] = [];
+  for (let from = 0; ; from += SIZE) {
+    const { data, error } = await page(from, from + SIZE - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < SIZE) return out;
+  }
+}
 
 function emptyCategories(): Categories {
   return {
@@ -63,6 +116,7 @@ function toHabit(row: ItemRow): Habit {
     habit.target = Number(row.target);
   }
   if (row.unit) habit.unit = row.unit;
+  if (row.created_at) habit.createdOn = dayStr(new Date(row.created_at));
   return habit;
 }
 
@@ -75,7 +129,8 @@ function groupRows(rows: ItemRow[]): Categories {
       categories.keystone_habits.push(toHabit(row));
       continue;
     }
-    const base = { id: row.id, text: row.text };
+    const base: TextItem = { id: row.id, text: row.text };
+    if (row.status && GOAL_CATEGORIES.has(row.category)) base.status = row.status;
     const withNote = row.note ? { ...base, note: row.note } : base;
     if (row.category === "tasks") {
       categories.tasks.push({ ...withNote, completed: row.completed });
@@ -135,17 +190,20 @@ export async function fetchDashboard(
   } = await supabase.auth.getUser();
   if (!user) return { lastActiveDate: todayStr(), categories: emptyCategories() };
 
-  const { data, error } = await supabase
+  const history = await historyEnabled(supabase);
+  let query = supabase
     .from("items")
-    .select(ITEM_COLUMNS)
-    .in("category", DAILY_CATEGORIES)
+    .select(history ? ITEM_COLUMNS_WITH_HISTORY : ITEM_COLUMNS)
+    .in("category", DAILY_CATEGORIES);
+  if (history) query = query.is("archived_at", null);
+  const { data, error } = await query
     .order("category", { ascending: true })
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
 
   if (error) throw error;
 
-  const rows = (data ?? []) as ItemRow[];
+  const rows = (data ?? []) as unknown as ItemRow[];
   await applyDueResets(
     supabase,
     rows.filter((r) => r.category === "keystone_habits")
@@ -168,10 +226,12 @@ export async function runDailyResetIfNeeded(
   } = await supabase.auth.getUser();
   if (!user) return false;
 
-  const { data } = await supabase
+  let query = supabase
     .from("items")
     .select("id, period, period_start, progress, completed")
     .eq("category", "keystone_habits");
+  if (await historyEnabled(supabase)) query = query.is("archived_at", null);
+  const { data } = await query;
 
   return applyDueResets(supabase, (data ?? []) as ResettableHabit[]);
 }
@@ -183,18 +243,27 @@ export async function fetchItems(
   category: ItemCategory,
   weekStart?: string
 ): Promise<TextItem[]> {
+  const history = await historyEnabled(supabase);
   let query = supabase
     .from("items")
-    .select("id, text, note, created_at")
+    .select(history ? "id, text, note, created_at, status" : "id, text, note, created_at")
     .eq("category", category);
   if (weekStart) query = query.eq("week_start", weekStart);
+  if (history) query = query.is("archived_at", null);
   const { data, error } = await query
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
   if (error) throw error;
-  return (data ?? []).map((row) => {
+  const rows = (data ?? []) as unknown as {
+    id: string;
+    text: string;
+    note: string | null;
+    status?: GoalStatus;
+  }[];
+  return rows.map((row) => {
     const item: TextItem = { id: row.id, text: row.text };
     if (row.note) item.note = row.note;
+    if (row.status && GOAL_CATEGORIES.has(category)) item.status = row.status;
     return item;
   });
 }
@@ -284,6 +353,55 @@ export async function deleteItem(
   id: string
 ): Promise<void> {
   const { error } = await supabase.from("items").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// What the trash button does. Habits, tasks and goals are hidden, not erased,
+// so their past stays in the timelines; an open goal removed this way counts
+// as dropped. Everything else, and everything before 0008, is deleted.
+export async function removeItem(
+  supabase: SupabaseClient,
+  category: ItemCategory,
+  id: string,
+  status?: GoalStatus
+): Promise<void> {
+  if (!HISTORY_CATEGORIES.has(category) || !(await historyEnabled(supabase))) {
+    return deleteItem(supabase, id);
+  }
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = { archived_at: now };
+  if (GOAL_CATEGORIES.has(category) && status !== "done") {
+    patch.status = "dropped";
+    patch.status_at = now;
+  }
+  const { error } = await supabase.from("items").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+// Ticks or unticks a task, recording when it was completed.
+export async function setTaskCompleted(
+  supabase: SupabaseClient,
+  id: string,
+  completed: boolean
+): Promise<void> {
+  const patch: Record<string, unknown> = { completed };
+  if (await historyEnabled(supabase)) {
+    patch.completed_at = completed ? new Date().toISOString() : null;
+  }
+  const { error } = await supabase.from("items").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+// Marks a goal achieved, or back to open.
+export async function setGoalStatus(
+  supabase: SupabaseClient,
+  id: string,
+  status: "open" | "done"
+): Promise<void> {
+  const { error } = await supabase
+    .from("items")
+    .update({ status, status_at: status === "done" ? new Date().toISOString() : null })
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -455,4 +573,138 @@ export async function setSpotlight(
     })
     .eq("id", user.id);
   if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Timelines (migration 0008)
+// ---------------------------------------------------------------------------
+
+// Records a habit's state for one local day: the window's progress as of that
+// day, with the target that applied. Called on every tick or stepper change.
+export async function logHabit(
+  supabase: SupabaseClient,
+  entry: HabitLog
+): Promise<void> {
+  const { error } = await supabase.from("habit_logs").upsert(
+    { ...entry, updated_at: new Date().toISOString() },
+    { onConflict: "user_id,habit_id,day" }
+  );
+  if (error) throw error;
+}
+
+// Habit log entries on or after `since` (YYYY-MM-DD), oldest first; all of
+// the person's habits, or just one.
+export async function fetchHabitLogs(
+  supabase: SupabaseClient,
+  since: string,
+  habitId?: string
+): Promise<HabitLog[]> {
+  const rows = await selectAll<HabitLog>((from, to) => {
+    let q = supabase
+      .from("habit_logs")
+      .select("habit_id, day, progress, target, completed")
+      .gte("day", since);
+    if (habitId) q = q.eq("habit_id", habitId);
+    return q.order("day", { ascending: true }).order("habit_id").range(from, to);
+  });
+  return rows.map((r) => ({
+    ...r,
+    progress: Number(r.progress),
+    target: r.target === null ? null : Number(r.target),
+  }));
+}
+
+// The day recording began for this person (YYYY-MM-DD).
+export async function fetchHistorySince(supabase: SupabaseClient): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return todayStr();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("history_since")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.history_since ?? todayStr();
+}
+
+// Current (not removed) habits, for the monthly review.
+export async function fetchActiveHabits(supabase: SupabaseClient): Promise<Habit[]> {
+  const { data, error } = await supabase
+    .from("items")
+    .select(ITEM_COLUMNS)
+    .eq("category", "keystone_habits")
+    .is("archived_at", null)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) throw error;
+  return ((data ?? []) as unknown as ItemRow[]).map(toHabit);
+}
+
+// When each task was completed, for tasks completed on or after `sinceIso`,
+// including tasks removed since.
+export async function fetchTaskCompletions(
+  supabase: SupabaseClient,
+  sinceIso: string
+): Promise<string[]> {
+  const rows = await selectAll<{ completed_at: string }>((from, to) =>
+    supabase
+      .from("items")
+      .select("completed_at")
+      .eq("category", "tasks")
+      .gte("completed_at", sinceIso)
+      .order("completed_at", { ascending: true })
+      .range(from, to)
+  );
+  return rows.map((r) => r.completed_at);
+}
+
+// Open tasks created before `beforeIso` and still on the list.
+export async function countStaleTasks(
+  supabase: SupabaseClient,
+  beforeIso: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("items")
+    .select("id", { count: "exact", head: true })
+    .eq("category", "tasks")
+    .eq("completed", false)
+    .is("archived_at", null)
+    .lt("created_at", beforeIso);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+// Goals at every level that were achieved or dropped since `sinceIso`, plus
+// every goal still open.
+export async function fetchGoalHistory(
+  supabase: SupabaseClient,
+  sinceIso: string
+): Promise<GoalRow[]> {
+  const cols = "id, text, category, status, status_at, archived_at";
+  const categories = [...GOAL_CATEGORIES];
+  const [resolved, open] = await Promise.all([
+    selectAll<GoalRow>((from, to) =>
+      supabase
+        .from("items")
+        .select(cols)
+        .in("category", categories)
+        .in("status", ["done", "dropped"])
+        .gte("status_at", sinceIso)
+        .order("status_at", { ascending: true })
+        .range(from, to)
+    ),
+    selectAll<GoalRow>((from, to) =>
+      supabase
+        .from("items")
+        .select(cols)
+        .in("category", categories)
+        .eq("status", "open")
+        .is("archived_at", null)
+        .order("created_at", { ascending: true })
+        .range(from, to)
+    ),
+  ]);
+  return [...resolved, ...open];
 }

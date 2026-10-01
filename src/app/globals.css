@@ -17,6 +17,12 @@
   --color-ink-3: #9d9d98;
   --color-good: #1f9d55;
   --color-danger: #d14343;
+  /* Timeline intensity: one tone, light to dark (sequential). */
+  --color-heat-0: #ecece8;
+  --color-heat-1: #c9c9c3;
+  --color-heat-2: #8d8d87;
+  --color-heat-3: #161616;
+
   --color-note: #fbf6de;
   --color-note-line: #ebe2a9;
 }

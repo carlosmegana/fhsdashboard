@@ -2,6 +2,7 @@ import DashboardCard from "@/components/DashboardCard";
 import ItemList from "@/components/ItemList";
 import PageHeader from "@/components/PageHeader";
 import ReadOnlyList from "@/components/ReadOnlyList";
+import MonthlyReview from "@/components/history/MonthlyReview";
 import { ZonesScoreCard } from "@/components/ZonesCard";
 
 // Monthly: reads the quarter and year goals; writes this month's zone scores
@@ -10,7 +11,11 @@ import { ZonesScoreCard } from "@/components/ZonesCard";
 export default function MonthlyPage() {
   return (
     <>
-      <PageHeader title="Monthly" subtitle="Lo que revisas una vez al mes." />
+      <PageHeader
+        title="Monthly"
+        subtitle="Lo que revisas una vez al mes."
+        aside={<MonthlyReview />}
+      />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="flex flex-col gap-4">
           <DashboardCard title="Metas del Trimestre" description="Hacia donde apunta este trimestre.">

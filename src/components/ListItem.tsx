@@ -3,6 +3,7 @@
 import type { TextItem } from "@/lib/types";
 import DeleteButton from "./DeleteButton";
 import EditableText from "./EditableText";
+import GoalCheckButton from "./GoalCheckButton";
 import NoteButton from "./NoteButton";
 import NotePanel from "./NotePanel";
 import SpotlightButton from "./SpotlightButton";
@@ -18,6 +19,8 @@ interface ListItemProps {
   onSaveNote: (text: string) => void;
   // Only on lists that support an Issue en Foco (the Issues list).
   spotlight?: { active: boolean; onToggle: () => void };
+  // Only on goal lists: mark the goal achieved (lograda) or open again.
+  goal?: { done: boolean; onToggle: () => void };
 }
 
 export default function ListItem({
@@ -29,12 +32,16 @@ export default function ListItem({
   onDelete,
   onSaveNote,
   spotlight,
+  goal,
 }: ListItemProps) {
   const noteState = useItemNote(item.note, onSaveNote);
 
   return (
     <li className="group py-1.5">
       <div className="flex items-center gap-2">
+        {goal && (
+          <GoalCheckButton done={goal.done} label={item.text} onToggle={goal.onToggle} />
+        )}
         <div className="min-w-0 flex-1">
           <EditableText
             text={item.text}
@@ -42,7 +49,7 @@ export default function ListItem({
             onStartEdit={onStartEdit}
             onSave={onSave}
             onCancel={onCancel}
-            className="text-[15px] text-ink"
+            className={goal?.done ? "text-[15px] text-ink-3" : "text-[15px] text-ink"}
           />
         </div>
         {spotlight?.active && (
